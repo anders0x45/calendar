@@ -2,24 +2,34 @@
  * Global state store. Views read state; render functions are idempotent.
  */
 
-/** @typedef {{view: "month"|"week"|"day"|"settings", cursor: Date, selectedDay: Date|null}} AppState */
+import { todayKey } from "./lib/dates.js";
+
+/**
+ * @typedef {import("./data/events.js").Event} Event
+ * @typedef {{
+ *   view: "month"|"week"|"day"|"settings",
+ *   cursor: string,
+ *   selectedDay: string|null,
+ *   events: Event[],
+ *   weekStartsOn: 0|1,
+ * }} AppState
+ */
 
 /** @type {AppState} */
 let state = {
   view: "month",
-  /** Presentation cursor (the period being displayed), local midnight. */
-  cursor: null,
-  /** Explicitly selected day, used by day sheets and the detail strip. */
-  selectedDay: null,
+  /** Presentation cursor (the period being displayed), local date key. */
+  cursor: todayKey(),
+  /** Explicitly selected day key, drives selection + the info strip. */
+  selectedDay: todayKey(),
+  events: [],
+  weekStartsOn: 1,
 };
 
 /** @type {Set<(s: AppState) => void>} */
 const subscribers = new Set();
 
-/**
- * Read the current state. Freeze copies to avoid accidental mutation.
- * @returns {AppState}
- */
+/** @returns {AppState} */
 export function getState() {
   return state;
 }

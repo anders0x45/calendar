@@ -31,7 +31,7 @@ The app itself still runs without `npm install`.
 | 1. Scaffold, tokens, header shell | done |
 | 2. Date/timezone/recurrence logic + tests | done |
 | 3. IndexedDB + settings | done |
-| 4. Month view + navigation | pending |
+| 4. Month view + navigation | done |
 | 5. Event sheet | pending |
 | 6. Week/day views | pending |
 | 7. Recurrence UI | pending |
@@ -53,5 +53,9 @@ The app itself still runs without `npm install`.
 - All-day events and date-only queries render on their stored date;
   timed events are converted to the viewer's timezone and may land on a
   different day.
+- The year-month picker includes an exact "jump to date" input (HTML date
+  field) in addition to the grid-based month/year selection.
+- Event chips in the month grid show color + title; the tiny image thumbnail
+  lands with the event image feature (milestone 8).
 - Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
   milestone-10 replacement. The service worker is a stub until milestone 10.

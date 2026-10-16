@@ -5,7 +5,8 @@
 
 import { withTransaction } from "./db.js";
 import { EVENT_COLORS, DELETION_MODES } from "../config.js";
-import { parseDate } from "../lib/dates.js";
+import { addDays, parseDate } from "../lib/dates.js";
+import { instantToDateKey, zonedWallToInstant } from "../lib/timezones.js";
 import { isValidHttpUrl, isValidTimeKey, isValidDateKey } from "../lib/validate.js";
 import { occurrencesInRange } from "../lib/recurrence.js";
 import { uuidV4 } from "../lib/uuid.js";
@@ -189,24 +190,44 @@ export async function deleteOccurrence(event, mode, occurrenceDate) {
  * range, or a recurring rule whose expansions touch the range.
  * Occurrence extraction for rendering returns one entry per occurrence:
  *   { event, date } where date is the occurrence's date key.
+ *
+ * viewerZone: when given, timed events are converted to that zone before
+ * placement (a 23:30 event in another zone can land on a different day).
+ * All-day events are pinned to their stored date. Without viewerZone no
+ * conversion happens (unit tests, callers that handle zone logic).
  * @param {Event[]} events
  * @param {string} startKey
  * @param {string} endKey
+ * @param {string} [viewerZone]
  * @returns {{event: Event, date: string}[]}
  */
-export function eventsForRange(events, startKey, endKey) {
+export function eventsForRange(events, startKey, endKey, viewerZone) {
   /** @type {{event: Event, date: string}[]} */
   const out = [];
+  const widen = viewerZone ? 1 : 0;
+  const searchStart = addDays(startKey, -widen);
+  const searchEnd = addDays(endKey, widen);
   for (const event of events) {
-    // Defensive skip of events that ended before the range entirely.
     const until = event.recurrence?.until;
-    if (until && until < startKey) continue;
-    if (event.date > endKey) continue;
-    for (const date of occurrencesInRange(event, startKey, endKey)) {
-      out.push({ event, date });
+    if (until && until < searchStart) continue;
+    if (event.date > searchEnd) continue;
+    for (const date of occurrencesInRange(event, searchStart, searchEnd)) {
+      out.push({ event, date: placeDate(event, date, viewerZone) });
     }
   }
-  return out;
+  return out.filter(({ date }) => date >= startKey && date <= endKey);
+}
+
+/**
+ * Viewer-side placement date of an occurrence.
+ * @param {Event} event @param {string} date @param {string} [viewerZone]
+ * @returns {string}
+ */
+function placeDate(event, date, viewerZone) {
+  if (!viewerZone) return date;
+  if (!event.time) return date; // all-day stays on its stored date
+  const instant = zonedWallToInstant(date, event.time, event.timezone ?? viewerZone);
+  return instantToDateKey(instant, viewerZone);
 }
 
 /**

@@ -1,5 +1,5 @@
-/* View-specific layout (month/week/day grids, sheets, cards).
-   Filled in as views are built. */
+/* View-specific layout: control deck, month grid, sheets and picker.
+   Day/week-specific rules are appended by their milestones. */
 
 .view-chrome {
   /* Control deck above the main view content */
@@ -7,4 +7,432 @@
   flex-direction: column;
   gap: var(--space-sm);
   margin-bottom: var(--space-md);
+}
+
+.deck-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.deck-title {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  overflow: hidden;
+  background: var(--color-surface-plate);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.deck-title:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 transparent;
+  border-top-color: var(--color-bevel-shadow);
+  border-left-color: var(--color-bevel-shadow);
+  border-bottom-color: var(--color-bevel-highlight);
+  border-right-color: var(--color-bevel-highlight);
+}
+
+.deck-title__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-today {
+  min-width: 0;
+  padding: 0 var(--space-md);
+}
+
+/* ---------- Month grid ---------- */
+
+.month-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.month-weekdays,
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2xs);
+}
+
+.month-weekdays {
+  background: var(--color-surface-plate);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) 0;
+}
+
+.month-weekdays__cell {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--color-ink);
+}
+
+.month-weekdays__cell.is-sunday {
+  color: var(--color-sun);
+}
+
+.month-grid {
+  border: var(--bevel-width) solid var(--color-bevel-shadow);
+  /* nested grid seam look: hard square corners inside the chassis */
+  border-radius: var(--radius-0);
+  background: var(--color-canvas);
+  padding: var(--space-2xs);
+}
+
+.month-cell {
+  min-height: 72px;
+  padding: var(--space-2xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  background: var(--color-surface-raised);
+  border: 1px solid #c9c5bd;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.month-cell.is-outside {
+  background: var(--color-surface-plate);
+  opacity: 0.55;
+}
+
+.month-cell.is-today {
+  border: var(--bevel-width) solid var(--color-accent);
+  background: var(--color-accent-well);
+  box-shadow: 1px 1px 0 var(--color-bevel-shadow);
+}
+
+.month-cell.is-selected {
+  background: var(--color-accent);
+  border-width: var(--bevel-width);
+  border-top-color: var(--color-bevel-shadow);
+  border-left-color: var(--color-bevel-shadow);
+  border-bottom-color: var(--color-accent-highlight);
+  border-right-color: var(--color-accent-highlight);
+  transform: translate(1px, 1px);
+  box-shadow: none;
+}
+
+.month-cell__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  min-height: 14px;
+}
+
+.month-cell__day {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.month-cell.is-today .month-cell__day {
+  color: var(--color-on-accent);
+}
+
+.month-cell.is-selected .month-cell__day {
+  color: var(--color-accent-well);
+}
+
+.month-cell__today {
+  margin-right: auto;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0 3px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 1px 1px 0 var(--color-bevel-shadow);
+}
+
+.month-cell.is-selected .month-cell__today {
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+}
+
+.event-chip {
+  height: 16px;
+  line-height: 1;
+  padding: 1px 3px;
+  border: 1px solid var(--color-bevel-shadow);
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  min-width: 0;
+}
+
+.month-cell__more {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 3px;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-bevel-shadow);
+}
+
+/* ---------- Day strip ---------- */
+
+.day-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  background: var(--color-surface-plate);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+}
+
+.day-strip__badge {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  border: 1px solid var(--color-bevel-shadow);
+  border-radius: var(--radius-md);
+}
+
+.day-strip__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.day-strip__title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.day-strip__next {
+  font-size: 12px;
+  color: var(--color-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Sheets ---------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 30, 30, 0.45);
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  width: 100%;
+  max-height: min(92dvh, 780px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface-plate);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-card);
+  padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + var(--safe-bottom));
+  padding-left: calc(var(--space-md) + var(--safe-left));
+  padding-right: calc(var(--space-md) + var(--safe-right));
+  animation: sheet-up var(--motion-fast) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    animation: none;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.sheet__grip {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto var(--space-sm);
+  background: var(--color-ink-faint);
+  border: 1px solid var(--color-bevel-shadow);
+  border-radius: 999px;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: var(--bevel-width) solid var(--color-bevel-shadow);
+}
+
+.sheet__title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.btn--wide {
+  width: 100%;
+  margin-top: var(--space-md);
+}
+
+/* ---------- Picker ---------- */
+
+.year-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.year-row__label {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.year-grid__cell,
+.month-picker__cell {
+  min-height: var(--tap-target);
+  background: var(--color-surface-raised);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.year-grid__cell:active,
+.month-picker__cell:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 transparent;
+  border-top-color: var(--color-bevel-shadow);
+  border-left-color: var(--color-bevel-shadow);
+  border-bottom-color: var(--color-bevel-highlight);
+  border-right-color: var(--color-bevel-highlight);
+}
+
+.year-grid__cell.is-selected,
+.month-picker__cell.is-selected {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-top-color: var(--color-bevel-shadow);
+  border-left-color: var(--color-bevel-shadow);
+  border-bottom-color: var(--color-accent-highlight);
+  border-right-color: var(--color-accent-highlight);
+}
+
+.month-grid-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+}
+
+.jumprow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.jumprow__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.jumprow__input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  font-size: 16px; /* prevents iOS zoom */
+  font-family: var(--font-mono);
+  padding: 0 var(--space-sm);
+}
+
+.jumprow input[type="date"] {
+  background: var(--color-surface-raised);
+  border: var(--bevel-width) solid;
+  border-top-color: var(--color-bevel-shadow);
+  border-left-color: var(--color-bevel-shadow);
+  border-bottom-color: var(--color-bevel-highlight);
+  border-right-color: var(--color-bevel-highlight);
+  border-radius: var(--radius-md);
 }
