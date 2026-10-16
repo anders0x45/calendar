@@ -1,0 +1,93 @@
+/* Design tokens — tactile_retro_chrono palette.
+   Swap the palette here; everything else references these variables. */
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../fonts/jetbrains-mono-var.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../fonts/inter-var.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Surfaces */
+  --color-canvas: #dedede;
+  --color-surface-plate: #f7f4ea;
+  --color-surface-raised: #ffffff;
+
+  /* Ink */
+  --color-ink: #1e1e1e;
+  --color-ink-soft: #5c5850;
+  --color-ink-faint: #a8a49c;
+
+  /* Bevel edges */
+  --color-bevel-highlight: #ffffff;
+  --color-bevel-shadow: #1a1a1a;
+
+  /* Accents */
+  --color-accent: #c3469e;
+  --color-on-accent: #ffffff;
+  --color-accent-highlight: #e178c1;
+  --color-accent-well: #ffd8ec;
+  --color-tertiary: #44c086;
+  --color-on-tertiary: #1e1e1e;
+  --color-tertiary-well: #d3f2e3;
+  --color-danger: #b3261e;
+  --color-on-danger: #ffffff;
+  --color-danger-well: #ffdad6;
+  --color-sat: #006c45;
+  --color-sun: #ba1a1a;
+
+  /* Event category colors */
+  --event-red: #e5484d;
+  --event-green: #3da35d;
+  --event-yellow: #f2c230;
+  --event-orange: #e2861f;
+  --event-teal: #2ba3a0;
+  --event-blue: #3b6fe0;
+  --event-purple: #8b5cd6;
+  --event-pink: #e05a9c;
+
+  /* Typography */
+  --font-mono: "JetBrains Mono", ui-monospace, "Courier New", monospace;
+  --font-body: "Inter", system-ui, sans-serif;
+
+  /* Radii */
+  --radius-0: 0;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+
+  /* Spacing */
+  --space-2xs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* Bevel + shadow utility values (opaque colors only) */
+  --bevel-width: 2px;
+  --shadow-raised: 2px 2px 0 var(--color-bevel-shadow);
+  --shadow-hero: 4px 4px 0 var(--color-bevel-shadow);
+  --shadow-card: 3px 3px 0 var(--color-bevel-shadow);
+
+  /* Safety + layout */
+  --tap-target: 44px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Durations (kept minimal; disabled under reduced-motion) */
+  --motion-fast: 120ms;
+}

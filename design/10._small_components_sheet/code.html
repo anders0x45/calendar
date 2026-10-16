@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {"inverse-on-surface": "#f3f0ef", "surface-container-low": "#f6f3f2", "on-primary-container": "#fffbff", "surface-bright": "#fcf9f8", "on-primary-fixed": "#3b002d", "tertiary-container": "#008858", "on-secondary": "#ffffff", "tertiary-fixed": "#81faba", "on-tertiary-container": "#ffffff", "inverse-surface": "#303030", "on-tertiary-fixed": "#002112", "on-secondary-fixed-variant": "#474746", "inverse-primary": "#ffaede", "on-secondary-container": "#636262", "surface-container-high": "#eae7e7", "on-surface": "#1b1b1c", surface: "#fcf9f8", primary: "#a12881", "surface-container": "#f0eded", "surface-dim": "#dcd9d9", tertiary: "#006c45", "surface-container-lowest": "#ffffff", "on-tertiary": "#ffffff", "secondary-container": "#e2dfde", "surface-tint": "#a42b83", "primary-fixed-dim": "#ffaede", background: "#fcf9f8", "tertiary-fixed-dim": "#63dda0", "primary-fixed": "#ffd8ec", "secondary-fixed": "#e5e2e1", secondary: "#5f5e5e", "surface-variant": "#e5e2e1", "primary-container": "#c0439b", "on-tertiary-fixed-variant": "#005233", "on-primary-fixed-variant": "#86076a", "error-container": "#ffdad6", "on-error-container": "#93000a", "on-error": "#ffffff", "on-primary": "#ffffff", "surface-container-highest": "#e5e2e1", "on-secondary-fixed": "#1c1b1b", outline: "#87717c", "on-background": "#1b1b1c", error: "#ba1a1a", "outline-variant": "#d9c0cc", "secondary-fixed-dim": "#c8c6c5", "on-surface-variant": "#54424b"}, borderRadius: {DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem"}, spacing: {"margin-desktop": "2rem", "space-xs": "0.25rem", gutter: "0.75rem", "gutter-desktop": "1rem", "space-md": "0.75rem", "space-xl": "1.5rem", "space-sm": "0.5rem", margin: "1rem", "space-lg": "1rem"}, fontFamily: {"label-sm": ["JetBrains Mono"], "body-lg": ["Inter"], "display-lg": ["JetBrains Mono"], "label-lg": ["JetBrains Mono"], "body-md": ["Inter"], "body-sm": ["Inter"], "headline-sm": ["JetBrains Mono"], "label-md": ["JetBrains Mono"], "headline-lg": ["JetBrains Mono"], "headline-md": ["JetBrains Mono"], headline: ["JetBrains Mono"], display: ["JetBrains Mono"], body: ["Inter"], label: ["JetBrains Mono"]}, fontSize: {"label-sm": ["10px", {lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "700"}], "body-lg": ["20px", {lineHeight: "24px", fontWeight: "400"}], "display-lg": ["32px", {lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700"}], "label-lg": ["14px", {lineHeight: "20px", letterSpacing: "0.02em", fontWeight: "600"}], "body-md": ["14px", {lineHeight: "20px", fontWeight: "400"}], "body-sm": ["12px", {lineHeight: "16px", fontWeight: "500"}], "headline-sm": ["16px", {lineHeight: "24px", fontWeight: "600"}], "label-md": ["12px", {lineHeight: "16px", letterSpacing: "0.04em", fontWeight: "600"}], "headline-lg": ["24px", {lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "700"}], "headline-md": ["20px", {lineHeight: "28px", fontWeight: "600"}]}}}};</script><style>@layer base{html,body{width:100%;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface font-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl pt-safe shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button aria-label="Go back" class="w-11 h-11 flex items-center justify-center rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-transform active:translate-x-0.5 active:translate-y-0.5" onclick="history.back()"><span class="material-symbols-outlined text-[20px]">arrow_back</span></button><img alt="Retro Chrono App Icon" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1V4T_GMoL0GF-V1LpYczVAifNp3aS94Xs9qkzgBv9qw85Q8ekhsY5etEDH1c63L4C_MxThZOsjIVvivDCjZY14ublAKNZTBzFKyWE02YcAwifnwrX8-fY-EP9j7P1nTpSHTo0RV3ugkz6RsFgZudO-NDOK55mklJ1ob4FlgSIzpSWN1jXgqjZchPABK6askdgYkPb6UCxNw82L9WARMwUIUmLNQHaD-V3jvnSWFonOvZeeKLNR-KYvwYHeq"/><h1 class="font-headline-sm text-headline-sm uppercase tracking-tight text-on-surface">Modal</h1></div></div></header><main class="flex flex-col relative w-full pt-16 pb-safe bg-surface min-h-screen"><div class="flex flex-col w-full p-margin gap-space-xl">
+<!-- Header Section -->
+<section class="flex flex-col gap-space-xs">
+<div class="inline-flex items-center gap-space-xs px-2 py-0.5 w-fit rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">tune</span>
+<span class="">SYSTEM DESIGN SPEC v1.04</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface tracking-tight uppercase">CHRONO // COMPONENT SYSTEM</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Tactile retro dialogs, toasts, and mechanical loading states.</p>
+</section>
+<!-- Component 1: Undo Toast -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-secondary tracking-wider">[ 01. NOTIFICATION TOAST // DESTRUCTIVE UNDO ]</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ACTIVE (5s)</span>
+</div>
+<div class="w-full bg-inverse-surface text-inverse-on-surface rounded p-space-md shadow-[4px_4px_0px_#1B1B1F] flex flex-col gap-space-sm relative overflow-hidden">
+<div class="flex items-center justify-between gap-space-md">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-6 h-6 rounded bg-surface-container-lowest text-on-surface flex items-center justify-center font-label-sm text-label-sm shadow-[1px_1px_0px_#000]">
+            ✓
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm text-inverse-on-surface truncate">Event deleted.</span>
+<span class="font-label-sm text-label-sm text-outline-variant">"Q3 Marketing Sync" cleared</span>
+</div>
+</div>
+<button class="px-space-md py-1.5 bg-primary-container text-on-primary rounded font-label-md text-label-md tracking-wider uppercase shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-1 shrink-0" id="undo-btn">
+<span class="material-symbols-outlined text-[16px]">undo</span>
+          [ UNDO ]
+        </button>
+</div>
+<!-- Tactile Segmented Countdown Bar -->
+<div class="w-full h-2 bg-inverse-surface/80 rounded-sm p-[1px] flex items-center shadow-[inset_1px_1px_0px_#000]">
+<div class="h-full bg-primary-fixed-dim transition-all duration-100 ease-linear rounded-sm" id="undo-progress" style="width: 55.6%;"></div>
+</div>
+</div>
+</section>
+<!-- Component 2: Recurring Event Delete Confirmation Dialog -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-secondary tracking-wider">[ 02. MODAL DIALOG // RECURRING SCOPE ]</span>
+<span class="font-label-sm text-label-sm text-error">PROMPT_BLOCK</span>
+</div>
+<div class="w-full bg-surface-container rounded p-space-lg shadow-[4px_4px_0px_#1B1B1F] flex flex-col gap-space-md">
+<!-- Warning Stripe Header -->
+<div class="h-4 w-full bg-[repeating-linear-gradient(45deg,#b46100,#b46100_10px,#fdf9ed_10px,#fdf9ed_20px)] rounded-sm shadow-[inset_1px_1px_0px_#1B1B1F]"></div>
+<div class="flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-error text-[24px] shrink-0">warning</span>
+<div class="flex flex-col gap-1">
+<h3 class="font-headline-sm text-headline-sm uppercase text-on-surface tracking-tight leading-tight">DELETE RECURRING EVENT</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">This is a repeating event. Which occurrences do you wish to remove from your agenda?</p>
+</div>
+</div>
+<!-- Action Stack -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<!-- Option 1: Single Event -->
+<button class="w-full py-2.5 px-space-md bg-surface-container-lowest text-on-surface rounded font-label-md text-label-md tracking-wider uppercase shadow-[2px_2px_0px_#1B1B1F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-between">
+<span class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-primary rounded-sm"></span>
+            [ THIS EVENT ONLY ]
+          </span>
+<span class="font-label-sm text-label-sm text-secondary">JUN 18</span>
+</button>
+<!-- Option 2: Series -->
+<button class="w-full py-2.5 px-space-md bg-error text-on-error rounded font-label-md text-label-md tracking-wider uppercase shadow-[2px_2px_0px_#1B1B1F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-between">
+<span class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 bg-error-container rounded-sm"></span>
+            [ ALL EVENTS IN SERIES ]
+          </span>
+<span class="font-label-sm text-label-sm text-error-container">12 TOTAL</span>
+</button>
+<!-- Dismiss -->
+<button class="w-full py-2 text-center text-secondary hover:text-on-surface font-label-sm text-label-sm uppercase tracking-wider active:translate-y-0.5">
+          [ CANCEL ]
+        </button>
+</div>
+</div>
+</section>
+<!-- Component 3: Import Preview Dialog (Merge vs Replace) -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-secondary tracking-wider">[ 03. FILE PREVIEW &amp; RESOLUTION ]</span>
+<span class="font-label-sm text-label-sm text-primary">IO_STREAM</span>
+</div>
+<div class="w-full bg-surface-container-high rounded p-space-md shadow-[4px_4px_0px_#1B1B1F] flex flex-col gap-space-md">
+<!-- Title Bar -->
+<div class="flex items-center justify-between bg-surface-container-highest px-space-sm py-1.5 rounded-sm shadow-[inset_1px_1px_0px_#1B1B1F]">
+<div class="flex items-center gap-1.5 min-w-0">
+<span class="material-symbols-outlined text-[16px] text-on-surface">data_object</span>
+<span class="font-label-sm text-label-sm text-on-surface truncate">IMPORT CALENDAR JSON (24 EVENTS)</span>
+</div>
+<span class="font-label-sm text-label-sm bg-primary text-on-primary px-1.5 py-0.2 rounded-sm shrink-0">v2.1</span>
+</div>
+<!-- Breakdown Stat Row -->
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="bg-surface-container-lowest p-space-sm rounded shadow-[2px_2px_0px_#1B1B1F] flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">IDENTIFIED</span>
+<span class="font-headline-md text-headline-md text-primary">18 NEW</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Ready to write</span>
+</div>
+<div class="bg-surface-container-lowest p-space-sm rounded shadow-[2px_2px_0px_#1B1B1F] flex flex-col">
+<span class="font-label-sm text-label-sm text-secondary uppercase">CONFLICT</span>
+<span class="font-headline-md text-headline-md text-tertiary">06 CLASH</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Slot collisions</span>
+</div>
+</div>
+<!-- Segmented Radio Decisions -->
+<div class="flex flex-col gap-space-xs" id="import-choices">
+<!-- Radio Option 1: Merge -->
+<label class="flex items-start gap-space-sm p-space-sm bg-surface-container-lowest rounded cursor-pointer shadow-[2px_2px_0px_#1B1B1F] hover:bg-surface-bright transition-colors">
+<input checked="" class="mt-1 accent-primary w-4 h-4" name="import-mode" type="radio" value="merge"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md uppercase text-on-surface flex items-center gap-1">
+              [ MERGE SCHEDULES ]
+              <span class="font-label-sm text-label-sm text-primary font-bold">(RECOMMENDED)</span>
+</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant leading-tight">Append incoming events; keep current entries intact and re-slot conflicting times.</span>
+</div>
+</label>
+<!-- Radio Option 2: Replace -->
+<label class="flex items-start gap-space-sm p-space-sm bg-surface-container-lowest rounded cursor-pointer shadow-[2px_2px_0px_#1B1B1F] hover:bg-surface-bright transition-colors">
+<input class="mt-1 accent-primary w-4 h-4" name="import-mode" type="radio" value="replace"/>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md uppercase text-error flex items-center gap-1">
+              [ WIPE &amp; REPLACE ]
+            </span>
+<span class="font-body-sm text-body-sm text-on-surface-variant leading-tight">Purge local workspace entirely and write newly parsed archive as pristine baseline.</span>
+</div>
+</label>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-space-sm pt-space-xs">
+<button class="flex-1 py-2.5 px-space-md bg-primary text-on-primary rounded font-label-md text-label-md uppercase tracking-wider shadow-[2px_2px_0px_#1B1B1F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">publish</span>
+          [ PROCEED IMPORT ]
+        </button>
+<button class="px-space-md py-2.5 bg-surface-container-lowest text-secondary rounded font-label-md text-label-md uppercase shadow-[2px_2px_0px_#1B1B1F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all">
+          [ DISCARD ]
+        </button>
+</div>
+</div>
+</section>
+<!-- Component 4: Loading Skeleton State -->
+<section class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-secondary tracking-wider">[ 04. MECHANICAL SKELETON // RETRO HATCH ]</span>
+<span class="font-label-sm text-label-sm text-tertiary animate-pulse">BUSY_CYCLE</span>
+</div>
+<div class="w-full bg-surface-container-lowest rounded p-space-md shadow-[3px_3px_0px_#1B1B1F] flex flex-col gap-space-sm">
+<div class="flex items-center justify-between pb-space-xs border-b border-surface-variant">
+<div class="flex items-center gap-1.5">
+<span class="inline-block w-2.5 h-2.5 bg-primary animate-ping rounded-full"></span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface">SYNCHRONIZING RETRO_CORE...</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary">PORT: 8080</span>
+</div>
+<!-- Simulated Event Card Skeleton -->
+<div class="w-full bg-surface-container rounded p-space-md shadow-[2px_2px_0px_#1B1B1F] flex items-center gap-space-md">
+<!-- 44x44 Mechanical Hatching Block -->
+<div class="w-11 h-11 shrink-0 rounded bg-[repeating-linear-gradient(45deg,#cbc6b9,#cbc6b9_3px,#ece8dc_3px,#ece8dc_6px)] shadow-[inset_1px_1px_0px_#1B1B1F] flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary text-[20px] opacity-75">sync</span>
+</div>
+<!-- Shimmering Line Placeholders -->
+<div class="flex flex-col gap-space-xs flex-1 min-w-0">
+<div class="h-4 w-3/4 bg-[repeating-linear-gradient(45deg,#cbc6b9,#cbc6b9_4px,#ece8dc_4px,#ece8dc_8px)] rounded-sm shadow-[inset_1px_1px_0px_#8A867A]"></div>
+<div class="h-3 w-1/2 bg-[repeating-linear-gradient(45deg,#cbc6b9,#cbc6b9_4px,#ece8dc_4px,#ece8dc_8px)] rounded-sm shadow-[inset_1px_1px_0px_#8A867A]"></div>
+<div class="h-2.5 w-1/3 bg-[repeating-linear-gradient(45deg,#cbc6b9,#cbc6b9_4px,#ece8dc_4px,#ece8dc_8px)] rounded-sm shadow-[inset_1px_1px_0px_#8A867A]"></div>
+</div>
+</div>
+<!-- Status Subtext -->
+<div class="flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant px-1">
+<span class="">FETCH: /api/v1/retro-events</span>
+<span class="">CHUNK 03/12</span>
+</div>
+</div>
+</section>
+<!-- Component 5: Error Toast -->
+<section class="flex flex-col gap-space-sm mb-space-lg">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase text-secondary tracking-wider">[ 05. FAULT EXCEPTION BANNER ]</span>
+<span class="font-label-sm text-label-sm text-error font-bold">FATAL_TRAP</span>
+</div>
+<div class="w-full bg-error text-on-error rounded p-space-md shadow-[4px_4px_0px_#1B1B1F] flex flex-col gap-space-sm">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-start gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded bg-error-container text-on-error-container shrink-0 flex items-center justify-center font-bold shadow-[2px_2px_0px_#000]">
+            ⚠️
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-headline-sm text-headline-sm tracking-tight leading-tight uppercase truncate">SYNC_ERR: AUTH_EXPIRED</span>
+<span class="font-body-sm text-body-sm text-error-container mt-0.5">API KEY INVALID OR REMOTE TOKEN REVOKED BY HOST</span>
+</div>
+</div>
+<button class="px-space-md py-1.5 bg-surface-container-lowest text-on-surface rounded font-label-md text-label-md tracking-wider uppercase shadow-[2px_2px_0px_#000000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all shrink-0">
+          [ RETRY ]
+        </button>
+</div>
+<!-- Technical Telemetry Box -->
+<div class="bg-black/20 p-space-xs rounded font-label-sm text-label-sm text-on-error/90 shadow-[inset_1px_1px_0px_rgba(0,0,0,0.5)] flex items-center justify-between">
+<span class="">CODE: 0x8004100E</span>
+<span class="">SUBSYS: NET_SYNC_CLIENT</span>
+</div>
+</div>
+</section>
+</div>
+<script>
+  // Interactive Countdown Simulation for Undo Toast
+  (function initUndoCounter() {
+    const bar = document.getElementById('undo-progress');
+    const undoBtn = document.getElementById('undo-btn');
+    if (!bar) return;
+
+    let width = 72;
+    const interval = setInterval(() => {
+      width -= 1.2;
+      if (width <= 0) {
+        width = 100;
+      }
+      bar.style.width = width + '%';
+    }, 100);
+
+    if (undoBtn) {
+      undoBtn.addEventListener('click', () => {
+        width = 100;
+        bar.style.width = '100%';
+        undoBtn.textContent = 'RESTORED!';
+        setTimeout(() => {
+          undoBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">undo</span> [ UNDO ]';
+        }, 1200);
+      });
+    }
+  })();
+</script></main>
+</body></html>

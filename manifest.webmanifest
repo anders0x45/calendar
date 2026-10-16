@@ -1,0 +1,23 @@
+{
+  "name": "Chrono.exe",
+  "short_name": "Chrono",
+  "description": "Local-first retro calendar",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#dedede",
+  "theme_color": "#dedede",
+  "icons": [
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+/* View-specific layout (month/week/day grids, sheets, cards).
+   Filled in as views are built. */
+
+.view-chrome {
+  /* Control deck above the main view content */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
