@@ -33,7 +33,7 @@ The app itself still runs without `npm install`.
 | 3. IndexedDB + settings | done |
 | 4. Month view + navigation | done |
 | 5. Event sheet | done |
-| 6. Week/day views | pending |
+| 6. Week/day views | done |
 | 7. Recurrence UI | pending |
 | 8. Image generation + settings | pending |
 | 9. Export/import | pending |
@@ -62,5 +62,12 @@ The app itself still runs without `npm install`.
 - For recurring events, deletion asks "this event only" vs "the whole
   series"; the delete commits after the undo toast expires (undo cancels
   the pending commit rather than restoring data).
+- Week view: 7-day strip (tap to select) above the full week's agenda
+  grouped by day with event dot previews; day view: all-day well plus a
+  24-hour timeline with cards positioned at the viewer's converted time
+  and a "now" line on today. Both share the agenda-card component.
+- The router is the single writer of `state.view`, which drives the
+  deck's segmented control, subtitle, and period title (week shows the
+  "OCT 12 – OCT 18" range, day the exact date).
 - Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
   milestone-10 replacement. The service worker is a stub until milestone 10.

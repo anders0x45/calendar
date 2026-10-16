@@ -2,6 +2,8 @@ import { initRouter, navigate, registerView, onAfterSwitch } from "./router.js";
 import { setState, getState } from "./state.js";
 import { mountControlDeck, shiftPeriod } from "./ui/header.js";
 import { mountMonthView } from "./ui/monthView.js";
+import { mountWeekView } from "./ui/weekView.js";
+import { mountDayView } from "./ui/dayView.js";
 import { openPickerSheet } from "./ui/picker.js";
 import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
@@ -22,6 +24,10 @@ let deckHost = null;
 let contentHost = null;
 /** @type {import("./ui/monthView.js").ReturnType<typeof mountMonthView> | null} */
 let monthViewEl = null;
+/** @type {import("./ui/weekView.js").ReturnType<typeof mountWeekView> | null} */
+let weekViewEl = null;
+/** @type {import("./ui/dayView.js").ReturnType<typeof mountDayView> | null} */
+let dayViewEl = null;
 
 async function main() {
   requestPersistentStorage();
@@ -71,8 +77,8 @@ async function main() {
   });
 
   registerView("month", renderMonth);
-  registerView("week", () => renderComingSoon("Week view arrives in milestone 6."));
-  registerView("day", () => renderComingSoon("Day view arrives in milestone 6."));
+  registerView("week", renderWeek);
+  registerView("day", renderDay);
   registerView("settings", renderSettings);
   onAfterSwitch(rememberLastView);
 
@@ -91,6 +97,20 @@ function renderMonth() {
   deckHost.hidden = false;
   if (!monthViewEl) monthViewEl = mountMonthView();
   contentHost.replaceChildren(monthViewEl);
+}
+
+function renderWeek() {
+  if (!contentHost || !deckHost) return;
+  deckHost.hidden = false;
+  if (!weekViewEl) weekViewEl = mountWeekView();
+  contentHost.replaceChildren(weekViewEl);
+}
+
+function renderDay() {
+  if (!contentHost || !deckHost) return;
+  deckHost.hidden = false;
+  if (!dayViewEl) dayViewEl = mountDayView();
+  contentHost.replaceChildren(dayViewEl);
 }
 
 /**

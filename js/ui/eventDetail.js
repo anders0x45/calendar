@@ -22,9 +22,11 @@ import { zonedWallToInstant, instantToDateKey, instantToTimeKey, userTimeZone } 
  */
 export function openEventDetail({ event, onClose }) {
   const { body, close } = openSheet({ label: "Event detail", onClose });
-  renderSheetHead(body, "SYS.EVENT_LOG", close);
   body.classList.add("sheet--detail");
   render(body, event, close);
+  // Head goes in last (then to the top): render() replaces body content.
+  const { head } = renderSheetHead(body, "SYS.EVENT_LOG", close);
+  body.prepend(head);
   return close;
 }
 

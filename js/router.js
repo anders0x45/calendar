@@ -4,6 +4,8 @@
  * which one is mounted and keeps the bottom nav in sync.
  */
 
+import { setState } from "./state.js";
+
 /** @type {"month"|"week"|"day"|"settings"} */
 let currentView = "month";
 
@@ -31,6 +33,7 @@ export function navigate(view) {
     throw new Error(`No view registered for "${view}"`);
   }
   currentView = view;
+  setState({ view });
   const subtitle = { month: "Month", week: "Week", day: "Day", settings: "Config" }[view];
   const subtitleEl = document.getElementById("header-subtitle");
   if (subtitleEl) subtitleEl.textContent = subtitle;
