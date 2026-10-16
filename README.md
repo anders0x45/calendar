@@ -34,7 +34,7 @@ The app itself still runs without `npm install`.
 | 4. Month view + navigation | done |
 | 5. Event sheet | done |
 | 6. Week/day views | done |
-| 7. Recurrence UI | pending |
+| 7. Recurrence UI | done |
 | 8. Image generation + settings | pending |
 | 9. Export/import | pending |
 | 10. PWA + offline | pending |
@@ -62,6 +62,11 @@ The app itself still runs without `npm install`.
 - For recurring events, deletion asks "this event only" vs "the whole
   series"; the delete commits after the undo toast expires (undo cancels
   the pending commit rather than restoring data).
+- Recurring edits are series-only by design: editing a repeating event
+  shows a "SERIES EDIT" notice and applies to every occurrence; skipped
+  dates stay skipped. `validateEventDraft` now owns all recurrence rule
+  validation (freq, interval, until format, until >= start), shared by
+  the event form now and import later.
 - Week view: 7-day strip (tap to select) above the full week's agenda
   grouped by day with event dot previews; day view: all-day well plus a
   24-hour timeline with cards positioned at the viewer's converted time

@@ -9,7 +9,7 @@ import { EVENT_COLORS, TITLE_MAX_LENGTH } from "../config.js";
 import { validateEventDraft } from "../lib/validate.js";
 import { makeEvent, saveEvent } from "../data/events.js";
 import { userTimeZone, supportedTimeZones, isValidTimeZone } from "../lib/timezones.js";
-import { parseDate, todayKey } from "../lib/dates.js";
+import { todayKey } from "../lib/dates.js";
 import { inkForBackground } from "../lib/color.js";
 import { refreshEvents } from "./refresh.js";
 
@@ -90,6 +90,9 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
   const summary = document.createElement("p");
   summary.className = "form-summary";
 
+  const seriesNote =
+    isEdit && existing.recurrence ? buildSeriesNote(existing.recurrence.exceptions.length) : null;
+
   const saveBtn = document.createElement("button");
   saveBtn.type = "button";
   saveBtn.className = "btn btn--primary";
@@ -114,6 +117,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
     buildRepeatSection(),
     actions,
   );
+  if (seriesNote) body.prepend(seriesNote);
 
   /** DOM detail helpers (kept local: one form, one set of widgets). */
 
@@ -219,11 +223,28 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
     return block;
   }
 
+  /**
+   * Notice shown when editing a recurring event: edits apply to the
+   * whole series; deleted occurrences stay skipped.
+   * @param {number} skippedCount
+   * @returns {HTMLElement}
+   */
+  function buildSeriesNote(skippedCount) {
+    const note = document.createElement("p");
+    note.className = "form-summary form-summary--series";
+    note.setAttribute("role", "note");
+    const skipped = skippedCount > 0 ? ` ${skippedCount} skipped date${skippedCount === 1 ? "" : "s"} stay skipped.` : "";
+    note.textContent = `SERIES EDIT — changes apply to every occurrence.${skipped}`;
+    return note;
+  }
   function buildRepeatSection() {
     const block = repeatSection();
     const untilRow = document.createElement("div");
     untilRow.className = "form-row";
-    untilRow.append(untilInput);
+    const untilLabel = document.createElement("span");
+    untilLabel.className = "repeat-details__label";
+    untilLabel.textContent = "UNTIL (OPTIONAL)";
+    untilRow.append(untilLabel, untilInput);
     block.append(untilRow, intervalError, untilError);
     block.hidden = !draft.repeatOn;
     draft.repeatBlock = block;
@@ -256,7 +277,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
   }
 
   function recurrenceFields() {
-    if (!draft.repeatOn) return null;
+    if (!repeatToggle.checked) return null;
     return {
       freq: /** @type {"daily"|"weekly"|"monthly"|"yearly"} */ (draft.freq),
       interval: Math.round(Number(intervalInput.value)) || 1,
@@ -273,17 +294,6 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
       time: allDay ? null : timeInput.value || null,
       recurrence: rec,
     });
-    if (rec) {
-      if (!(Number.isInteger(Number(intervalInput.value)) && Number(intervalInput.value) >= 1)) {
-        errors.interval = "Interval is 1 or more";
-      }
-      if (untilInput.value && !parseDate(untilInput.value)) {
-        errors.until = "End date must be valid";
-      }
-      if (untilInput.value && dateInput.value && untilInput.value < dateInput.value) {
-        errors.until = "End date must be on or after the start";
-      }
-    }
     if (!isValidTimeZone(zoneInput.value.trim())) {
       errors.timezone = "Unknown timezone";
     }
@@ -293,7 +303,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
     zoneError.textContent = errors.timezone ?? "";
     locationError.textContent = errors.locationLink ?? "";
     untilError.textContent = errors.until ?? "";
-    intervalError.textContent = errors.interval ?? "";
+    intervalError.textContent = errors.recurrence ?? "";
     saveBtn.disabled = Object.keys(errors).length > 0;
   }
 
@@ -305,8 +315,14 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
       return;
     }
     const interval = Math.max(1, Number(intervalInput.value) || 1);
-    const until = untilInput.value ? `, until ${untilInput.value}` : ", no end";
-    summary.textContent = `Every ${interval} ${draft.freq}(s)${until}`;
+    const unit = draft.freq === "daily" ? "day" : draft.freq === "weekly" ? "week" : draft.freq === "monthly" ? "month" : "year";
+    const plural = interval > 1 ? "s" : "";
+    const until = untilInput.value ? `until ${untilInput.value}` : "no end";
+    const skipNote =
+      (existing?.recurrence?.exceptions.length ?? 0) > 0
+        ? `, ${existing.recurrence.exceptions.length} skipped`
+        : "";
+    summary.textContent = `Every ${interval} ${unit}${plural}, ${until}${skipNote}`;
     validate();
   }
 
@@ -317,7 +333,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
       title: titleInput.value.trim(),
       color: draft.color,
       date: dateInput.value,
-      time: draft.allDay ? null : timeInput.value || null,
+      time: allDayToggle.checked ? null : timeInput.value || null,
       timezone: zoneInput.value.trim() || userTimeZone(),
       locationLink: locationInput.value.trim() || null,
       recurrence: rec,
@@ -359,7 +375,6 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
   });
 
   syncFreqRow();
-  if (draft.repeatOn) syncFreqRow();
   validate();
   titleInput.focus();
 

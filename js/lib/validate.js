@@ -3,7 +3,8 @@
  */
 
 import { TITLE_MAX_LENGTH } from "../config.js";
-import { parseDate } from "./dates.js";
+import { compareDateKeys, parseDate } from "./dates.js";
+import { isRuleValid } from "./recurrence.js";
 
 /**
  * @param {unknown} value
@@ -61,6 +62,17 @@ export function validateEventDraft(draft) {
   if (draft.time !== null && !isValidTimeKey(draft.time)) errors.time = "Enter a valid time";
   if (draft.locationLink && !isValidHttpUrl(draft.locationLink)) {
     errors.locationLink = "Link must start with http:// or https://";
+  }
+  const rule = draft.recurrence;
+  if (rule !== null && rule !== undefined) {
+    if (!isRuleValid(rule)) {
+      errors.recurrence = "Repeat rule is invalid";
+    }
+    if (rule.until && isValidDateKey(rule.until) && isValidDateKey(draft.date)) {
+      if (compareDateKeys(rule.until, draft.date) < 0) {
+        errors.until = "End date must be on or after the start";
+      }
+    }
   }
   return errors;
 }

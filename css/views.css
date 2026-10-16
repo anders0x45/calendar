@@ -597,6 +597,21 @@
   color: var(--color-ink-soft);
 }
 
+.form-summary--series {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--bevel-width) solid;
+  border-radius: var(--radius-sm);
+  border-top-color: var(--color-bevel-highlight);
+  border-left-color: var(--color-bevel-highlight);
+  border-bottom-color: var(--color-bevel-shadow);
+  border-right-color: var(--color-bevel-shadow);
+  background: var(--color-accent-well);
+  color: var(--color-ink);
+}
+
 .form-actions {
   display: flex;
   gap: var(--space-sm);
