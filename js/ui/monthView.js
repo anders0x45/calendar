@@ -10,6 +10,7 @@ import { eventsForRange } from "../data/events.js";
 import { EVENT_COLORS, MONTH_CELL_MAX_CHIPS } from "../config.js";
 import { inkForBackground } from "../lib/color.js";
 import { userTimeZone } from "../lib/timezones.js";
+import { openEventDetail } from "./eventDetail.js";
 
 /** @returns {HTMLElement} */
 export function mountMonthView() {
@@ -37,13 +38,31 @@ export function mountMonthView() {
   render();
 
   grid.addEventListener("click", (event) => {
-    const cell = event.target.closest(".month-cell");
+    const target = /** @type {HTMLElement} */ (event.target);
+    const chipEl = /** @type {HTMLElement} */ (target.closest(".event-chip"));
+    if (chipEl) {
+      const found = findEntry(chipEl.dataset.eventId ?? "");
+      if (found) {
+        openEventDetail({ event: found });
+        return;
+      }
+    }
+    const cell = target.closest(".month-cell");
     if (cell instanceof HTMLElement && cell.dataset.date) {
       setState({ selectedDay: cell.dataset.date });
     }
   });
 
   return root;
+}
+
+/**
+ * Look up an event by id in the current state.
+ * @param {string} id
+ * @returns {{event: import("../data/events.js").Event} | null}
+ */
+function findEntry(id) {
+  return getState().events.find((event) => event.id === id) ?? null;
 }
 
 /**
@@ -146,8 +165,10 @@ function monthCell(key, monthOfCursor, byDay, selectedDay, today) {
  * @returns {HTMLElement}
  */
 function chip(event) {
-  const chipEl = document.createElement("span");
+  const chipEl = document.createElement("button");
+  chipEl.type = "button";
   chipEl.className = "event-chip";
+  chipEl.dataset.eventId = event.id;
   const color = EVENT_COLORS[event.color] ?? EVENT_COLORS.blue;
   const ink = inkForBackground(color);
   chipEl.style.background = color;

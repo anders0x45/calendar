@@ -4,6 +4,7 @@ import { mountControlDeck, shiftPeriod } from "./ui/header.js";
 import { mountMonthView } from "./ui/monthView.js";
 import { openPickerSheet } from "./ui/picker.js";
 import { attachSwipe } from "./ui/gestures.js";
+import { openEventForm } from "./ui/eventSheet.js";
 import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
 import { requestPersistentStorage } from "./data/db.js";
@@ -49,7 +50,11 @@ async function main() {
     onNext: () => shiftPeriod(1),
   });
 
-  if (fab) fab.addEventListener("click", () => navigate(navigableView()));
+  if (fab) {
+    fab.addEventListener("click", () => {
+      openEventForm({ defaultDate: getState().selectedDay ?? getState().cursor });
+    });
+  }
 
   const settings = await loadSettings();
   let events = [];

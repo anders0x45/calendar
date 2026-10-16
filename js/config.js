@@ -26,6 +26,9 @@ export const MONTH_CELL_MAX_CHIPS = 2;
 /** Undo toast duration in milliseconds. */
 export const UNDO_TOAST_MS = 6000;
 
+/** Default (non-undo) toast duration in milliseconds. */
+export const TOAST_MS = 4500;
+
 /** Restore point after deleting recurring events. */
 export const DELETION_MODES = { ONLY: "only", ALL: "all" };
 

@@ -32,7 +32,7 @@ The app itself still runs without `npm install`.
 | 2. Date/timezone/recurrence logic + tests | done |
 | 3. IndexedDB + settings | done |
 | 4. Month view + navigation | done |
-| 5. Event sheet | pending |
+| 5. Event sheet | done |
 | 6. Week/day views | pending |
 | 7. Recurrence UI | pending |
 | 8. Image generation + settings | pending |
@@ -57,5 +57,10 @@ The app itself still runs without `npm install`.
   field) in addition to the grid-based month/year selection.
 - Event chips in the month grid show color + title; the tiny image thumbnail
   lands with the event image feature (milestone 8).
+- The timezone picker uses a native searchable input (datalist of
+  Intl.supportedValuesOf("timeZone")).
+- For recurring events, deletion asks "this event only" vs "the whole
+  series"; the delete commits after the undo toast expires (undo cancels
+  the pending commit rather than restoring data).
 - Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
   milestone-10 replacement. The service worker is a stub until milestone 10.
