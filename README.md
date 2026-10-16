@@ -15,13 +15,22 @@ npx serve .
 
 Open http://localhost:8000. The app is designed for ~360-430px screens.
 
+## Tests
+
+```
+npm install          # dev-only dependency: fake-indexeddb
+node --test tests/
+```
+
+The app itself still runs without `npm install`.
+
 ## Status
 
 | Milestone | Status |
 | --- | --- |
 | 1. Scaffold, tokens, header shell | done |
-| 2. Date/timezone/recurrence logic + tests | pending |
-| 3. IndexedDB + settings | pending |
+| 2. Date/timezone/recurrence logic + tests | done |
+| 3. IndexedDB + settings | done |
 | 4. Month view + navigation | pending |
 | 5. Event sheet | pending |
 | 6. Week/day views | pending |
@@ -37,9 +46,12 @@ Open http://localhost:8000. The app is designed for ~360-430px screens.
   `icons/`; no CDN requests.
 - Optional dev-only tooling (ESLint/Prettier) may be added later; the app
   never requires `npm install` to run.
-- Run tests with `node --test tests/` (arrives with milestone 2).
+- `npm install` is only for the test runner's fake-indexeddb shim.
 
 ## Notes
 
+- All-day events and date-only queries render on their stored date;
+  timed events are converted to the viewer's timezone and may land on a
+  different day.
 - Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
   milestone-10 replacement. The service worker is a stub until milestone 10.
