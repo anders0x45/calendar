@@ -37,7 +37,7 @@ The app itself still runs without `npm install`.
 | 7. Recurrence UI | done |
 | 8. Image generation + settings | done |
 | 9. Export/import | done |
-| 10. PWA + offline | pending |
+| 10. PWA + offline | done |
 | 11. Accessibility + polish | pending |
 
 ## Development
@@ -91,5 +91,10 @@ The app itself still runs without `npm install`.
 - The events-status/image pairing means an import of "ready" events
   brings its own artwork blobs along (or falls back to placeholders if
   the envelope has none).
-- Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
-  milestone-10 replacement. The service worker is a stub until milestone 10.
+- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v1`)
+  and serves it cache-first; image-generation API calls are never
+  intercepted and POSTs bypass the worker. Updates wait; a "[ RELOAD ]"
+  toast appears when a new worker is installed-and-waiting. Icons ship
+  as self-hosted PNG (192/512 + maskable renders of the SVG icon).
+  Verified by loading the whole app from cache with the network
+  disabled.

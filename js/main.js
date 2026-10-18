@@ -13,6 +13,7 @@ import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
 import { requestPersistentStorage } from "./data/db.js";
 import { todayKey } from "./lib/dates.js";
+import { registerServiceWorker } from "./ui/serviceWorker.js";
 
 /**
  * Entry point: boot storage, mount shared chrome and the last-used view.
@@ -35,6 +36,7 @@ let settingsViewEl = null;
 
 async function main() {
   requestPersistentStorage();
+  registerServiceWorker();
 
   const root = document.getElementById("view-root");
   const fab = document.getElementById("btn-fab");

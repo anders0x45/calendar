@@ -7,11 +7,12 @@ import { UNDO_TOAST_MS, TOAST_MS } from "../config.js";
 
 /**
  * @param {{message: string, subtext?: string|null, onUndo?: () => void,
- *   isError?: boolean}} options
+ *   actionLabel?: string, onAction?: () => void, isError?: boolean}} options
  * @returns {() => void} dismiss handle
  */
-export function showToast({ message, subtext = null, onUndo, isError = false }) {
-  const durationMs = onUndo ? UNDO_TOAST_MS : TOAST_MS;
+export function showToast({ message, subtext = null, onUndo, actionLabel, onAction, isError = false }) {
+  const hasAction = Boolean(onUndo || (actionLabel && onAction));
+  const durationMs = hasAction ? UNDO_TOAST_MS : TOAST_MS;
   const toast = document.createElement("div");
   toast.className = "toast" + (isError ? " toast--error" : "");
   toast.setAttribute("role", isError ? "alert" : "status");
@@ -30,17 +31,18 @@ export function showToast({ message, subtext = null, onUndo, isError = false }) 
   }
   toast.append(text);
 
-  let undone = false;
-  if (onUndo) {
+  let done = false;
+  if (onUndo || (actionLabel && onAction)) {
     const undoBtn = document.createElement("button");
     undoBtn.type = "button";
     undoBtn.className = "btn toast__undo";
-    undoBtn.textContent = "[ UNDO ]";
+    undoBtn.textContent = onUndo ? "[ UNDO ]" : (`[ ${actionLabel} ]`);
     undoBtn.addEventListener("click", () => {
-      undone = true;
+      done = true;
       clearTimeout(timer);
       dismiss();
-      onUndo();
+      if (onUndo) onUndo();
+      else onAction?.();
     });
     toast.append(undoBtn);
   }
