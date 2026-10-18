@@ -8,7 +8,8 @@ import { openSheet, renderSheetHead } from "./sheet.js";
 import { openEventForm } from "./eventSheet.js";
 import { refreshEvents } from "./refresh.js";
 import { showToast } from "./toast.js";
-import { deleteEvent, deleteOccurrence } from "../data/events.js";
+import { deleteEvent, deleteOccurrence, saveEvent } from "../data/events.js";
+import { getImage } from "../data/images.js";
 import { EVENT_COLORS, UNDO_TOAST_MS } from "../config.js";
 import { isValidHttpUrl } from "../lib/validate.js";
 import { inkForBackground } from "../lib/color.js";
@@ -116,6 +117,39 @@ function detailBanner(event) {
   tag.className = "detail-banner__tag";
   tag.textContent = "REC_PREVIEW";
   banner.append(placeholder, tag);
+
+  // Art status: ready -> real image; pending -> tag flips; failed -> tag
+  // plus a regenerate action. Async blob load keeps render synchronous.
+  if (event.imageStatus === "ready") {
+    tag.textContent = "ART_READY";
+    getImage(event.id).then((blob) => {
+      if (blob && banner.isConnected) {
+        const img = document.createElement("img");
+        img.className = "detail-banner__img";
+        img.alt = "";
+        img.setAttribute("aria-hidden", "true");
+        img.src = URL.createObjectURL(blob);
+        banner.replaceChildren(img, tag);
+      }
+    });
+  } else if (event.imageStatus === "pending") {
+    tag.textContent = "GEN_QUEUED…";
+  } else if (event.imageStatus === "failed") {
+    tag.textContent = "GEN_FAILED";
+    const retry = button("[ REGENERATE ]", "btn detail-banner__retry");
+    retry.addEventListener("click", async () => {
+      try {
+        await saveEvent({ ...event, imageStatus: "pending", updatedAt: Date.now() });
+        await refreshEvents();
+        tag.textContent = "GEN_QUEUED…";
+        retry.remove();
+      } catch (error) {
+        console.error("regenerate failed", error);
+        showToast({ message: "Could not queue artwork", isError: true });
+      }
+    });
+    banner.append(retry);
+  }
   return banner;
 }
 

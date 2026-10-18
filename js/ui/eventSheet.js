@@ -9,8 +9,9 @@ import { EVENT_COLORS, TITLE_MAX_LENGTH } from "../config.js";
 import { validateEventDraft } from "../lib/validate.js";
 import { makeEvent, saveEvent } from "../data/events.js";
 import { userTimeZone, supportedTimeZones, isValidTimeZone } from "../lib/timezones.js";
-import { todayKey } from "../lib/dates.js";
+import { parseDate, todayKey } from "../lib/dates.js";
 import { inkForBackground } from "../lib/color.js";
+import { getState } from "../state.js";
 import { refreshEvents } from "./refresh.js";
 
 /** @typedef {import("../data/events.js").Event} Event */
@@ -32,6 +33,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
         color: "blue",
         allDay: false,
         repeatOn: false,
+        autoArt: getState().settings?.autoArt ?? true,
       };
 
   const { body, close } = openSheet({
@@ -342,7 +344,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
       await saveEvent(
         isEdit
           ? { ...existing, ...base, updatedAt: Date.now() }
-          : makeEvent({ ...base, imageStatus: "none" }),
+          : makeEvent({ ...base, imageStatus: draft.autoArt ? "pending" : "none" }),
       );
       await refreshEvents();
       close();

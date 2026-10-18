@@ -5,6 +5,7 @@
 
 import { EVENT_COLORS } from "../config.js";
 import { inkForBackground } from "../lib/color.js";
+import { getImage } from "../data/images.js";
 import { openEventDetail } from "./eventDetail.js";
 
 /** @typedef {import("../data/events.js").Event} Event */
@@ -57,6 +58,20 @@ export function agendaCard(event, timeLabel) {
 
   card.append(media, body);
   card.addEventListener("click", () => openEventDetail({ event }));
+
+  // Stored artwork replaces the letter block once generation is done.
+  if (event.imageStatus === "ready") {
+    getImage(event.id).then((blob) => {
+      if (blob && card.isConnected) {
+        const img = document.createElement("img");
+        img.className = "agenda-card__img";
+        img.alt = "";
+        img.setAttribute("aria-hidden", "true");
+        img.src = URL.createObjectURL(blob);
+        media.replaceWith(img);
+      }
+    });
+  }
   return card;
 }
 

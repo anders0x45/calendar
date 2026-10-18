@@ -6,7 +6,7 @@
 import { withTransaction } from "./db.js";
 import { userTimeZone } from "../lib/timezones.js";
 
-/** @typedef {{geminiApiKey: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day"}|null} Settings */
+/** @typedef {{geminiApiKey: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day", defaultDurationMin: 30|60|90, militaryTime: boolean, autoArt: boolean}|null} Settings */
 
 const SETTINGS_KEY = "app";
 
@@ -35,6 +35,12 @@ export function emptySettings() {
     imageModel: null,
     weekStartsOn: defaultWeekStartsOn(),
     lastView: "month",
+    // Implicit event end, day-view card sizing and display slicing.
+    defaultDurationMin: 60,
+    // hh:mm vs 11:59 pm (time is always imported/stored as "HH:mm").
+    militaryTime: true,
+    // Generate Gemini artwork for new events automatically.
+    autoArt: true,
   };
 }
 

@@ -237,3 +237,11 @@ function placeDate(event, date, viewerZone) {
 export async function countEvents() {
   return withTransaction(["events"], "readonly", (stores) => stores.events.count());
 }
+
+/**
+ * Remove every event record (factory reset; call with deleteAllImages).
+ * @returns {Promise<void>}
+ */
+export async function deleteAllEvents() {
+  await withTransaction(["events"], "readwrite", (stores) => stores.events.clear());
+}

@@ -4,6 +4,8 @@ import { mountControlDeck, shiftPeriod } from "./ui/header.js";
 import { mountMonthView } from "./ui/monthView.js";
 import { mountWeekView } from "./ui/weekView.js";
 import { mountDayView } from "./ui/dayView.js";
+import { mountSettingsView } from "./ui/settingsView.js";
+import { startImageJobs } from "./ui/imageJobs.js";
 import { openPickerSheet } from "./ui/picker.js";
 import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
@@ -28,6 +30,8 @@ let monthViewEl = null;
 let weekViewEl = null;
 /** @type {import("./ui/dayView.js").ReturnType<typeof mountDayView> | null} */
 let dayViewEl = null;
+/** @type {import("./ui/settingsView.js").ReturnType<typeof mountSettingsView> | null} */
+let settingsViewEl = null;
 
 async function main() {
   requestPersistentStorage();
@@ -72,6 +76,7 @@ async function main() {
   setState({
     weekStartsOn: settings.weekStartsOn,
     events,
+    settings,
     cursor: todayKey(),
     selectedDay: todayKey(),
   });
@@ -82,6 +87,7 @@ async function main() {
   registerView("settings", renderSettings);
   onAfterSwitch(rememberLastView);
 
+  startImageJobs();
   initRouter();
   navigate(settings.lastView);
 }
@@ -113,38 +119,11 @@ function renderDay() {
   contentHost.replaceChildren(dayViewEl);
 }
 
-/**
- * @param {string} message
- */
-function renderComingSoon(message) {
-  if (!contentHost || !deckHost) return;
-  deckHost.hidden = false;
-  contentHost.replaceChildren(placeholderBox("Coming soon", message));
-}
-
 function renderSettings() {
   if (!contentHost || !deckHost) return;
   deckHost.hidden = true;
-  contentHost.replaceChildren(
-    placeholderBox("Config", "The settings screen arrives in milestone 8."),
-  );
-}
-
-/**
- * @param {string} title @param {string} body
- * @returns {HTMLElement}
- */
-function placeholderBox(title, body) {
-  const box = document.createElement("section");
-  box.className = "placeholder-view raised-plate";
-  const h2 = document.createElement("h2");
-  h2.className = "placeholder-view__title";
-  h2.textContent = title;
-  const p = document.createElement("p");
-  p.className = "placeholder-view__body";
-  p.textContent = body;
-  box.append(h2, p);
-  return box;
+  if (!settingsViewEl) settingsViewEl = mountSettingsView();
+  contentHost.replaceChildren(settingsViewEl);
 }
 
 /**

@@ -77,3 +77,11 @@ export async function putImages(images) {
     }
   });
 }
+
+/**
+ * Drop every stored image (factory reset).
+ * @returns {Promise<void>}
+ */
+export async function deleteAllImages() {
+  await withTransaction(["images"], "readwrite", (stores) => stores.images.clear());
+}

@@ -6,12 +6,14 @@ import { todayKey } from "./lib/dates.js";
 
 /**
  * @typedef {import("./data/events.js").Event} Event
+ * @typedef {import("./data/settings.js").Settings} Settings
  * @typedef {{
  *   view: "month"|"week"|"day"|"settings",
  *   cursor: string,
  *   selectedDay: string|null,
  *   events: Event[],
  *   weekStartsOn: 0|1,
+ *   settings: Settings,
  * }} AppState
  */
 
@@ -24,6 +26,7 @@ let state = {
   selectedDay: todayKey(),
   events: [],
   weekStartsOn: 1,
+  settings: null,
 };
 
 /** @type {Set<(s: AppState) => void>} */
