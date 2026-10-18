@@ -94,10 +94,11 @@ The app itself still runs without `npm install`.
 - The events-status/image pairing means an import of "ready" events
   brings its own artwork blobs along (or falls back to placeholders if
   the envelope has none).
-- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v1`)
+- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v2`)
   and serves it cache-first; image-generation API calls are never
-  intercepted and POSTs bypass the worker. Updates wait; a "[ RELOAD ]"
-  toast appears when a new worker is installed-and-waiting. Icons ship
+  intercepted and POSTs bypass the worker. Updates activate immediately
+  (skipWaiting on install) and an upgraded page reloads itself once via
+  controllerchange. Icons ship
   as self-hosted PNG (192/512 + maskable renders of the SVG icon).
   Verified by loading the whole app from cache with the network
   disabled.
