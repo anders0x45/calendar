@@ -38,7 +38,7 @@ The app itself still runs without `npm install`.
 | 8. Image generation + settings | done |
 | 9. Export/import | done |
 | 10. PWA + offline | done |
-| 11. Accessibility + polish | pending |
+| 11. Accessibility + polish | done |
 
 ## Development
 
@@ -102,3 +102,11 @@ The app itself still runs without `npm install`.
   as self-hosted PNG (192/512 + maskable renders of the SVG icon).
   Verified by loading the whole app from cache with the network
   disabled.
+- Accessibility: all icon-only buttons carry aria-labels (0 unlabeled in
+  a live sweep); sheets are `role="dialog"` modal with focus trap,
+  Escape close, and opener-focus restore; toasts use role="status"/
+  "alert". Keyboard: ArrowLeft/Right move the period, Tab shows a 2px
+  accent focus-visible outline, 44px minimum touch targets everywhere.
+  Text inputs are 16px to prevent iOS zoom-on-focus. prefers-reduced-
+  motion globally collapses animations/transitions. Verified at 390px
+  with zero console errors in both normal and reduced-motion modes.
