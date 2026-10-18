@@ -1,14 +1,16 @@
 /**
  * Settings stored as the single key "app" in the settings store.
- * Never log or export geminiApiKey.
+ * Never log or export cloudflareApiToken / cloudflareAccountId.
  */
 
 import { withTransaction } from "./db.js";
 import { userTimeZone } from "../lib/timezones.js";
 
-/** @typedef {{geminiApiKey: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day", defaultDurationMin: 30|60|90, militaryTime: boolean, autoArt: boolean}|null} Settings */
+/** @typedef {{cloudflareApiToken: string|null, cloudflareAccountId: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day", defaultDurationMin: 30|60|90, militaryTime: boolean, autoArt: boolean}|null} Settings */
 
 const SETTINGS_KEY = "app";
+/** @type {string[]} */
+const SECRET_STRING_FIELDS = ["cloudflareApiToken", "cloudflareAccountId"];
 
 /**
  * Infer default week start: 0 (Sunday) if Intl weekInfo says so, else 1.
@@ -31,7 +33,8 @@ export function defaultWeekStartsOn() {
  */
 export function emptySettings() {
   return {
-    geminiApiKey: null,
+    cloudflareApiToken: null,
+    cloudflareAccountId: null,
     imageModel: null,
     weekStartsOn: defaultWeekStartsOn(),
     lastView: "month",
@@ -39,7 +42,7 @@ export function emptySettings() {
     defaultDurationMin: 60,
     // hh:mm vs 11:59 pm (time is always imported/stored as "HH:mm").
     militaryTime: true,
-    // Generate Gemini artwork for new events automatically.
+    // Generate Workers AI artwork for new events automatically.
     autoArt: true,
   };
 }
@@ -51,9 +54,12 @@ export async function loadSettings() {
       stores.settings.get(SETTINGS_KEY),
     );
     if (stored && typeof stored === "object") {
-      // Merge over defaults so new fields keep working after upgrades.
+      // Merge over defaults so new fields keep working after upgrades;
+      // drop the retired Gemini key field from older installs.
       const defaults = emptySettings();
-      return { ...defaults, ...stored };
+      const merged = { ...defaults, ...stored };
+      delete merged.geminiApiKey;
+      return merged;
     }
     return emptySettings();
   } catch {
@@ -70,11 +76,13 @@ export async function loadSettings() {
 export async function saveSettings(patch) {
   const current = (await loadSettings()) ?? emptySettings();
   const merged = { ...current, ...patch };
-  if ("geminiApiKey" in merged) {
-    if (typeof merged.geminiApiKey !== "string" || merged.geminiApiKey === "") {
-      merged.geminiApiKey = null;
-    } else {
-      merged.geminiApiKey = String(merged.geminiApiKey);
+  for (const field of SECRET_STRING_FIELDS) {
+    if (field in merged) {
+      if (typeof merged[field] !== "string" || merged[field] === "") {
+        merged[field] = null;
+      } else {
+        merged[field] = String(/** @type {any} */ (merged[field]));
+      }
     }
   }
   await withTransaction(["settings"], "readwrite", (stores) =>

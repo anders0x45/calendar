@@ -1,13 +1,14 @@
 /**
- * Gemini image generation against the Generative Language REST API.
+ * Cloudflare Workers AI image generation (AI REST API, flux-1-schnell).
  * Pure network/response logic only — storage and retries live elsewhere.
- * Never logs the API key.
+ * Never logs the API token or account id.
  */
 
 import {
   IMAGE_API_BASE,
+  IMAGE_GEN_STEPS,
   IMAGE_GEN_TIMEOUT_MS,
-  IMAGE_MODEL_ID,
+  IMAGE_MODEL_PATH,
   IMAGE_PROMPT_TEMPLATE,
 } from "../config.js";
 
@@ -22,39 +23,41 @@ export function buildPrompt(title) {
   return IMAGE_PROMPT_TEMPLATE.replace("{title}", title);
 }
 
-/** @returns {string} */
-export function endpointUrl() {
-  return `${IMAGE_API_BASE}/models/${IMAGE_MODEL_ID}:generateContent`;
+/**
+ * Workers AI run endpoint for the configured model path.
+ * @param {string} accountId
+ * @returns {string}
+ */
+export function endpointUrl(accountId) {
+  return `${IMAGE_API_BASE}/accounts/${encodeURIComponent(accountId)}/ai/run/${IMAGE_MODEL_PATH}`;
 }
 
 /**
- * Extract the first inline image part from a GenerateContent response,
- * or explain why there is none.
+ * Extract the base64 image from a Workers AI run response, or explain
+ * why there is none.
  * @param {unknown} payload
  * @returns {{mimeType: string, data: string} | {reason: string}}
  */
-export function extractInlineImage(payload) {
+export function extractImageResult(payload) {
   if (typeof payload !== "object" || payload === null) {
     return { reason: "empty response" };
   }
   const body = /** @type {Record<string, any>} */ (payload);
-  if (body.error) {
-    return { reason: body.error?.message ? String(body.error.message) : "API error" };
+  if (Array.isArray(body.errors) && body.errors.length > 0) {
+    const parts = body.errors
+      .map((e) => (typeof e === "object" && e !== null ? String(e.message ?? "") : String(e)))
+      .filter(Boolean);
+    return { reason: parts.length > 0 ? parts.join("; ") : "API error" };
   }
-  const candidates = body.candidates;
-  if (!Array.isArray(candidates) || candidates.length === 0) {
-    return { reason: "no candidates — the prompt may have been blocked" };
+  if (body.success === false) {
+    return { reason: "API error" };
   }
-  const parts = candidates[0]?.content?.parts;
-  if (!Array.isArray(parts)) {
-    return { reason: candidates[0]?.finishReason ? `finishReason=${candidates[0].finishReason}` : "no content parts" };
+  const image = body.result?.image;
+  if (typeof image === "string" && image.length > 0) {
+    return { mimeType: "image/jpeg", data: image };
   }
-  for (const part of parts) {
-    if (typeof part !== "object" || part === null) continue;
-    const inline = part.inlineData;
-    if (inline && typeof inline.data === "string" && typeof inline.mimeType === "string") {
-      return { mimeType: inline.mimeType, data: inline.data };
-    }
+  if (typeof body.result?.msg === "string") {
+    return { reason: body.result.msg };
   }
   return { reason: "no image in response" };
 }
@@ -72,32 +75,32 @@ export function base64ToBlob(base64, mimeType) {
 /**
  * One generation request with the configured timeout. Throws on network
  * or timeout so the retry/queue layer can decide what to do.
- * @param {{apiKey: string, title: string}} input
+ * @param {{apiToken: string, accountId: string, title: string}} input
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<GenResult>}
  */
-export async function generateEventImage({ apiKey, title }, fetchImpl = fetch) {
+export async function generateEventImage({ apiToken, accountId, title }, fetchImpl = fetch) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), IMAGE_GEN_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(endpointUrl(), {
+    const response = await fetchImpl(endpointUrl(accountId), {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-goog-api-key": apiKey,
+        authorization: `Bearer ${apiToken}`,
       },
       signal: controller.signal,
       body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(title) }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+        prompt: buildPrompt(title),
+        steps: IMAGE_GEN_STEPS,
       }),
     });
-    if (!response.ok) {
-      return { ok: false, reason: `HTTP ${response.status}` };
-    }
-    const payload = await response.json();
-    const image = extractInlineImage(payload);
+    const payload = await response.json().catch(() => null);
+    const image = extractImageResult(payload);
     if ("reason" in image) {
+      if (!response.ok && image.reason === "API error") {
+        return { ok: false, reason: `HTTP ${response.status}` };
+      }
       return { ok: false, reason: image.reason };
     }
     return { ok: true, blob: base64ToBlob(image.data, image.mimeType) };

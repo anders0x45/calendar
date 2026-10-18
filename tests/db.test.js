@@ -37,15 +37,26 @@ test("openDb creates the calendar database with expected stores", async () => {
 test("settings round trip and defaults", async () => {
   const loaded = await loadSettings();
   assert.deepEqual(loaded, emptySettings());
-  const saved = await saveSettings({ geminiApiKey: "secret", lastView: "week" });
-  assert.equal(saved.geminiApiKey, "secret");
+  const saved = await saveSettings({
+    cloudflareApiToken: "secret-token",
+    cloudflareAccountId: "acc-123",
+    lastView: "week",
+  });
+  assert.equal(saved.cloudflareApiToken, "secret-token");
+  assert.equal(saved.cloudflareAccountId, "acc-123");
   assert.equal(saved.lastView, "week");
   const reloaded = await loadSettings();
-  assert.equal(reloaded.geminiApiKey, "secret");
+  assert.equal(reloaded.cloudflareApiToken, "secret-token");
+  assert.equal(reloaded.cloudflareAccountId, "acc-123");
   assert.equal(reloaded.lastView, "week");
-  // empty-string key is normalized to null (never allow empty keeper)
-  const cleared = await saveSettings({ geminiApiKey: "" });
-  assert.equal(cleared.geminiApiKey, null);
+  // empty-string credentials are normalized to null (never allow empty keeper)
+  const cleared = await saveSettings({ cloudflareApiToken: "", cloudflareAccountId: "" });
+  assert.equal(cleared.cloudflareApiToken, null);
+  assert.equal(cleared.cloudflareAccountId, null);
+  // the retired Gemini field is dropped on load
+  await saveSettings({ geminiApiKey: "legacy" });
+  const postLegacy = await loadSettings();
+  assert.equal("geminiApiKey" in postLegacy, false);
 });
 
 test("image store round trip and listing", async () => {

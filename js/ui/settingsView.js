@@ -55,21 +55,43 @@ function sectionCard(title, build) {
   return card;
 }
 
-/** API key row with reveal toggle. */
+/** Cloudflare Workers AI credentials: account id + API token (revealable). */
 function apiSection() {
+  const col = document.createElement("div");
+  col.className = "settings-col";
+
+  const accountInput = document.createElement("input");
+  accountInput.type = "text";
+  accountInput.className = "settings-key-input";
+  accountInput.placeholder = "32-hex account id…";
+  accountInput.autocomplete = "off";
+  accountInput.spellcheck = false;
+  accountInput.setAttribute("aria-label", "Cloudflare account ID");
+  accountInput.addEventListener("change", async () => {
+    await saveSettings({ cloudflareAccountId: accountInput.value.trim() || null });
+    setState({ settings: await loadSettings() });
+    showToast({ message: accountInput.value.trim() ? "Account ID saved." : "Account ID cleared." });
+  });
+
+  const accountHint = document.createElement("p");
+  accountHint.className = "settings-hint";
+  accountHint.textContent =
+    "Cloudflare ACCOUNT ID (dash.cloudflare.com → Workers & Pages → right sidebar). Used for event artwork.";
+
   const row = document.createElement("div");
   row.className = "settings-row";
 
-  const input = document.createElement("input");
-  input.type = "password";
-  input.className = "settings-key-input";
-  input.placeholder = "AIza…";
-  input.autocomplete = "off";
-  input.spellcheck = false;
-  input.setAttribute("aria-label", "Gemini API key");
-  input.addEventListener("change", async () => {
-    await saveSettings({ geminiApiKey: input.value.trim() || null });
-    showToast({ message: input.value.trim() ? "API key saved." : "API key cleared." });
+  const tokenInput = document.createElement("input");
+  tokenInput.type = "password";
+  tokenInput.className = "settings-key-input";
+  tokenInput.placeholder = "v1.0-… API token";
+  tokenInput.autocomplete = "off";
+  tokenInput.spellcheck = false;
+  tokenInput.setAttribute("aria-label", "Cloudflare API token");
+  tokenInput.addEventListener("change", async () => {
+    await saveSettings({ cloudflareApiToken: tokenInput.value.trim() || null });
+    setState({ settings: await loadSettings() });
+    showToast({ message: tokenInput.value.trim() ? "API token saved." : "API token cleared." });
   });
 
   const reveal = document.createElement("button");
@@ -78,28 +100,41 @@ function apiSection() {
   reveal.setAttribute("aria-pressed", "false");
   reveal.textContent = "[ REVEAL ]";
   reveal.addEventListener("click", () => {
-    const shown = input.type === "password";
-    input.type = shown ? "text" : "password";
+    const shown = tokenInput.type === "password";
+    tokenInput.type = shown ? "text" : "password";
     reveal.textContent = shown ? "[ HIDE ]" : "[ REVEAL ]";
     reveal.setAttribute("aria-pressed", shown ? "true" : "false");
   });
 
-  const hint = document.createElement("p");
-  hint.className = "settings-hint";
-  hint.textContent =
-    "Paste a Gemini API key (aistudio.google.com). Stored on device only, used for event artwork.";
+  const tokenHint = document.createElement("p");
+  tokenHint.className = "settings-hint";
+  tokenHint.textContent =
+    "Cloudflare API token for Workers AI (dash.cloudflare.com → My Profile → API Tokens). Stored on device only.";
 
-  row.append(input, reveal);
+  row.append(tokenInput, reveal);
 
-  const next = document.createElement("div");
-  next.className = "settings-col";
-  next.append(row, hint);
+  /** @param {string} text @returns {HTMLSpanElement} */
+  const label = (text) => {
+    const span = document.createElement("span");
+    span.className = "form-label";
+    span.textContent = text;
+    return span;
+  };
+  col.append(
+    label("ACCOUNT ID"),
+    accountInput,
+    accountHint,
+    label("API TOKEN"),
+    row,
+    tokenHint,
+  );
 
   loadSettings().then((settings) => {
-    input.value = settings.geminiApiKey ?? "";
+    accountInput.value = settings.cloudflareAccountId ?? "";
+    tokenInput.value = settings.cloudflareApiToken ?? "";
   });
 
-  return next;
+  return col;
 }
 
 /** Week start, default duration, time format. */
