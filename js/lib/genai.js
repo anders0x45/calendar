@@ -1,14 +1,13 @@
 /**
- * Cloudflare Workers AI image generation (AI REST API, flux-1-schnell).
- * Pure network/response logic only — storage and retries live elsewhere.
- * Never logs the API token or account id.
+ * Event artwork via a CORS-enabled Cloudflare Worker bridge (see
+ * bridge/worker.js) that runs Workers AI flux-1-schnell server-side.
+ * Pure network/response logic only — storage and retries live
+ * elsewhere. Never logs the bridge secret.
  */
 
 import {
-  IMAGE_API_BASE,
   IMAGE_GEN_STEPS,
   IMAGE_GEN_TIMEOUT_MS,
-  IMAGE_MODEL_PATH,
   IMAGE_PROMPT_TEMPLATE,
 } from "../config.js";
 
@@ -24,17 +23,8 @@ export function buildPrompt(title) {
 }
 
 /**
- * Workers AI run endpoint for the configured model path.
- * @param {string} accountId
- * @returns {string}
- */
-export function endpointUrl(accountId) {
-  return `${IMAGE_API_BASE}/accounts/${encodeURIComponent(accountId)}/ai/run/${IMAGE_MODEL_PATH}`;
-}
-
-/**
- * Extract the base64 image from a Workers AI run response, or explain
- * why there is none.
+ * Extract the base64 image from an art bridge response, or explain why
+ * there is none.
  * @param {unknown} payload
  * @returns {{mimeType: string, data: string} | {reason: string}}
  */
@@ -43,21 +33,12 @@ export function extractImageResult(payload) {
     return { reason: "empty response" };
   }
   const body = /** @type {Record<string, any>} */ (payload);
-  if (Array.isArray(body.errors) && body.errors.length > 0) {
-    const parts = body.errors
-      .map((e) => (typeof e === "object" && e !== null ? String(e.message ?? "") : String(e)))
-      .filter(Boolean);
-    return { reason: parts.length > 0 ? parts.join("; ") : "API error" };
+  if (typeof body.error === "string" && body.error.length > 0) {
+    return { reason: body.error };
   }
-  if (body.success === false) {
-    return { reason: "API error" };
-  }
-  const image = body.result?.image;
+  const image = body.image;
   if (typeof image === "string" && image.length > 0) {
     return { mimeType: "image/jpeg", data: image };
-  }
-  if (typeof body.result?.msg === "string") {
-    return { reason: body.result.msg };
   }
   return { reason: "no image in response" };
 }
@@ -75,19 +56,19 @@ export function base64ToBlob(base64, mimeType) {
 /**
  * One generation request with the configured timeout. Throws on network
  * or timeout so the retry/queue layer can decide what to do.
- * @param {{apiToken: string, accountId: string, title: string}} input
+ * @param {{bridgeUrl: string, artSecret: string, title: string}} input
  * @param {typeof fetch} [fetchImpl]
  * @returns {Promise<GenResult>}
  */
-export async function generateEventImage({ apiToken, accountId, title }, fetchImpl = fetch) {
+export async function generateEventImage({ bridgeUrl, artSecret, title }, fetchImpl = fetch) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), IMAGE_GEN_TIMEOUT_MS);
   try {
-    const response = await fetchImpl(endpointUrl(accountId), {
+    const response = await fetchImpl(bridgeUrl, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${apiToken}`,
+        "x-art-secret": artSecret,
       },
       signal: controller.signal,
       body: JSON.stringify({
@@ -95,12 +76,9 @@ export async function generateEventImage({ apiToken, accountId, title }, fetchIm
         steps: IMAGE_GEN_STEPS,
       }),
     });
-    const payload = await response.json().catch(() => null);
+    const payload = await response.json();
     const image = extractImageResult(payload);
     if ("reason" in image) {
-      if (!response.ok && image.reason === "API error") {
-        return { ok: false, reason: `HTTP ${response.status}` };
-      }
       return { ok: false, reason: image.reason };
     }
     return { ok: true, blob: base64ToBlob(image.data, image.mimeType) };

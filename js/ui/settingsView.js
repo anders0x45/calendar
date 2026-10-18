@@ -55,43 +55,43 @@ function sectionCard(title, build) {
   return card;
 }
 
-/** Cloudflare Workers AI credentials: account id + API token (revealable). */
+/** Art bridge endpoint + shared secret (revealable). */
 function apiSection() {
   const col = document.createElement("div");
   col.className = "settings-col";
 
-  const accountInput = document.createElement("input");
-  accountInput.type = "text";
-  accountInput.className = "settings-key-input";
-  accountInput.placeholder = "32-hex account id…";
-  accountInput.autocomplete = "off";
-  accountInput.spellcheck = false;
-  accountInput.setAttribute("aria-label", "Cloudflare account ID");
-  accountInput.addEventListener("change", async () => {
-    await saveSettings({ cloudflareAccountId: accountInput.value.trim() || null });
+  const urlInput = document.createElement("input");
+  urlInput.type = "url";
+  urlInput.className = "settings-key-input";
+  urlInput.placeholder = "https://chrono-art-bridge.<subdomain>.workers.dev";
+  urlInput.autocomplete = "off";
+  urlInput.spellcheck = false;
+  urlInput.setAttribute("aria-label", "Art bridge URL");
+  urlInput.addEventListener("change", async () => {
+    await saveSettings({ artBridgeUrl: urlInput.value.trim() || null });
     setState({ settings: await loadSettings() });
-    showToast({ message: accountInput.value.trim() ? "Account ID saved." : "Account ID cleared." });
+    showToast({ message: urlInput.value.trim() ? "Bridge URL saved." : "Bridge URL cleared." });
   });
 
-  const accountHint = document.createElement("p");
-  accountHint.className = "settings-hint";
-  accountHint.textContent =
-    "Cloudflare ACCOUNT ID (dash.cloudflare.com → Workers & Pages → right sidebar). Used for event artwork.";
+  const urlHint = document.createElement("p");
+  urlHint.className = "settings-hint";
+  urlHint.textContent =
+    "Art bridge worker URL (bridge/ in the repo; see bridge/README.md). Used for event artwork.";
 
   const row = document.createElement("div");
   row.className = "settings-row";
 
-  const tokenInput = document.createElement("input");
-  tokenInput.type = "password";
-  tokenInput.className = "settings-key-input";
-  tokenInput.placeholder = "v1.0-… API token";
-  tokenInput.autocomplete = "off";
-  tokenInput.spellcheck = false;
-  tokenInput.setAttribute("aria-label", "Cloudflare API token");
-  tokenInput.addEventListener("change", async () => {
-    await saveSettings({ cloudflareApiToken: tokenInput.value.trim() || null });
+  const secretInput = document.createElement("input");
+  secretInput.type = "password";
+  secretInput.className = "settings-key-input";
+  secretInput.placeholder = "shared secret…";
+  secretInput.autocomplete = "off";
+  secretInput.spellcheck = false;
+  secretInput.setAttribute("aria-label", "Art bridge secret");
+  secretInput.addEventListener("change", async () => {
+    await saveSettings({ artSecret: secretInput.value.trim() || null });
     setState({ settings: await loadSettings() });
-    showToast({ message: tokenInput.value.trim() ? "API token saved." : "API token cleared." });
+    showToast({ message: secretInput.value.trim() ? "Secret saved." : "Secret cleared." });
   });
 
   const reveal = document.createElement("button");
@@ -100,18 +100,18 @@ function apiSection() {
   reveal.setAttribute("aria-pressed", "false");
   reveal.textContent = "[ REVEAL ]";
   reveal.addEventListener("click", () => {
-    const shown = tokenInput.type === "password";
-    tokenInput.type = shown ? "text" : "password";
+    const shown = secretInput.type === "password";
+    secretInput.type = shown ? "text" : "password";
     reveal.textContent = shown ? "[ HIDE ]" : "[ REVEAL ]";
     reveal.setAttribute("aria-pressed", shown ? "true" : "false");
   });
 
-  const tokenHint = document.createElement("p");
-  tokenHint.className = "settings-hint";
-  tokenHint.textContent =
-    "Cloudflare API token for Workers AI (dash.cloudflare.com → My Profile → API Tokens). Stored on device only.";
+  const secretHint = document.createElement("p");
+  secretHint.className = "settings-hint";
+  secretHint.textContent =
+    "ART_SECRET of the bridge worker (x-art-secret header). Stored on device only.";
 
-  row.append(tokenInput, reveal);
+  row.append(secretInput, reveal);
 
   /** @param {string} text @returns {HTMLSpanElement} */
   const label = (text) => {
@@ -121,17 +121,17 @@ function apiSection() {
     return span;
   };
   col.append(
-    label("ACCOUNT ID"),
-    accountInput,
-    accountHint,
-    label("API TOKEN"),
+    label("ART BRIDGE URL"),
+    urlInput,
+    urlHint,
+    label("SHARED SECRET"),
     row,
-    tokenHint,
+    secretHint,
   );
 
   loadSettings().then((settings) => {
-    accountInput.value = settings.cloudflareAccountId ?? "";
-    tokenInput.value = settings.cloudflareApiToken ?? "";
+    urlInput.value = settings.artBridgeUrl ?? "";
+    secretInput.value = settings.artSecret ?? "";
   });
 
   return col;

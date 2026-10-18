@@ -38,21 +38,21 @@ test("settings round trip and defaults", async () => {
   const loaded = await loadSettings();
   assert.deepEqual(loaded, emptySettings());
   const saved = await saveSettings({
-    cloudflareApiToken: "secret-token",
-    cloudflareAccountId: "acc-123",
+    artBridgeUrl: "https://chrono-art-bridge.test.workers.dev",
+    artSecret: "secret-token",
     lastView: "week",
   });
-  assert.equal(saved.cloudflareApiToken, "secret-token");
-  assert.equal(saved.cloudflareAccountId, "acc-123");
+  assert.equal(saved.artBridgeUrl, "https://chrono-art-bridge.test.workers.dev");
+  assert.equal(saved.artSecret, "secret-token");
   assert.equal(saved.lastView, "week");
   const reloaded = await loadSettings();
-  assert.equal(reloaded.cloudflareApiToken, "secret-token");
-  assert.equal(reloaded.cloudflareAccountId, "acc-123");
+  assert.equal(reloaded.artBridgeUrl, "https://chrono-art-bridge.test.workers.dev");
+  assert.equal(reloaded.artSecret, "secret-token");
   assert.equal(reloaded.lastView, "week");
   // empty-string credentials are normalized to null (never allow empty keeper)
-  const cleared = await saveSettings({ cloudflareApiToken: "", cloudflareAccountId: "" });
-  assert.equal(cleared.cloudflareApiToken, null);
-  assert.equal(cleared.cloudflareAccountId, null);
+  const cleared = await saveSettings({ artBridgeUrl: "", artSecret: "" });
+  assert.equal(cleared.artBridgeUrl, null);
+  assert.equal(cleared.artSecret, null);
   // the retired Gemini field is dropped on load
   await saveSettings({ geminiApiKey: "legacy" });
   const postLegacy = await loadSettings();

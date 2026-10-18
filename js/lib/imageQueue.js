@@ -10,7 +10,7 @@ import { generateEventImage, resizeImageBlob } from "./genai.js";
 
 /** @typedef {import("../data/events.js").Event} Event */
 /** @typedef {(event: Event) => {ok: true, blob: Blob} | {ok: false, reason: string}} GenerateFn */
-/** @typedef {{apiToken: string|null, accountId: string|null, autoArt?: boolean}} QueueConfig */
+/** @typedef {{bridgeUrl: string|null, artSecret: string|null, autoArt?: boolean}} QueueConfig */
 
 /**
  * Events eligible for generation: pending status, recursion-free by
@@ -40,8 +40,8 @@ export function defaultDeps(config) {
   return {
     generate: (event) =>
       generateEventImage({
-        apiToken: config?.apiToken ?? "",
-        accountId: config?.accountId ?? "",
+        bridgeUrl: config?.bridgeUrl ?? "",
+        artSecret: config?.artSecret ?? "",
         title: event.title,
       }),
     saveImage: (id, blob) => import("../data/images.js").then((m) => m.saveImage(id, blob)),

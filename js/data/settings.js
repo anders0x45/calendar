@@ -6,11 +6,11 @@
 import { withTransaction } from "./db.js";
 import { userTimeZone } from "../lib/timezones.js";
 
-/** @typedef {{cloudflareApiToken: string|null, cloudflareAccountId: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day", defaultDurationMin: 30|60|90, militaryTime: boolean, autoArt: boolean}|null} Settings */
+/** @typedef {{artBridgeUrl: string|null, artSecret: string|null, imageModel: string, weekStartsOn: 0|1, lastView: "month"|"week"|"day", defaultDurationMin: 30|60|90, militaryTime: boolean, autoArt: boolean}|null} Settings */
 
 const SETTINGS_KEY = "app";
 /** @type {string[]} */
-const SECRET_STRING_FIELDS = ["cloudflareApiToken", "cloudflareAccountId"];
+const SECRET_STRING_FIELDS = ["artBridgeUrl", "artSecret"];
 
 /**
  * Infer default week start: 0 (Sunday) if Intl weekInfo says so, else 1.
@@ -33,8 +33,8 @@ export function defaultWeekStartsOn() {
  */
 export function emptySettings() {
   return {
-    cloudflareApiToken: null,
-    cloudflareAccountId: null,
+    artBridgeUrl: null,
+    artSecret: null,
     imageModel: null,
     weekStartsOn: defaultWeekStartsOn(),
     lastView: "month",
@@ -55,10 +55,12 @@ export async function loadSettings() {
     );
     if (stored && typeof stored === "object") {
       // Merge over defaults so new fields keep working after upgrades;
-      // drop the retired Gemini key field from older installs.
+      // drop the retired provider fields from older installs.
       const defaults = emptySettings();
       const merged = { ...defaults, ...stored };
-      delete merged.geminiApiKey;
+      for (const legacy of ["geminiApiKey", "cloudflareApiToken", "cloudflareAccountId"]) {
+        delete merged[legacy];
+      }
       return merged;
     }
     return emptySettings();
