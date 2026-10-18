@@ -6,6 +6,9 @@ call happens server-side; the browser talks only to this worker, so no
 Cloudflare API token is needed in the app — just the worker URL and a
 shared secret.
 
+Current deployment: https://chrono-art-bridge.amanuelgetachew554.workers.dev
+(the secret lives in the worker's bindings on the account, never in git).
+
 ## Deploy
 
 1. Authenticate once (browser OAuth):
