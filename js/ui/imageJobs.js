@@ -1,7 +1,7 @@
 /**
  * Idle-time image job runner for the browser. Reads pending events
- * from state, runs the queue when the API key allows, schedules the
- * next batch on idle, and refreshes state after changes.
+ * from state, runs the queue when Cloudflare credentials allow,
+ * schedules the next batch on idle, and refreshes state after changes.
  */
 
 import { pickPending, processOne } from "../lib/imageQueue.js";
@@ -40,9 +40,10 @@ function kick() {
 /** @returns {Promise<boolean>} true when work was done (re-kick may follow) */
 async function runOnce() {
   const { settings, events } = getState();
-  const apiKey = settings?.geminiApiKey ?? null;
+  const apiToken = settings?.cloudflareApiToken ?? null;
+  const accountId = settings?.cloudflareAccountId ?? null;
   const autoArt = settings?.autoArt ?? true;
-  const pending = (apiKey && autoArt) ? pickPending(events).slice(0, 1) : [];
+  const pending = apiToken && accountId && autoArt ? pickPending(events).slice(0, 1) : [];
   if (pending.length === 0) {
     running = false;
     if (pendingKick) {
@@ -55,7 +56,12 @@ async function runOnce() {
   try {
     for (const event of pending) {
       await processOne(event, {
-        generate: (e) => generateEventImage({ apiKey: /** @type {string} */ (apiKey), title: e.title }),
+        generate: (e) =>
+          generateEventImage({
+            apiToken: /** @type {string} */ (apiToken),
+            accountId: /** @type {string} */ (accountId),
+            title: e.title,
+          }),
         saveImage,
         saveEvent,
         resize: (blob) => resizeImageBlob(blob, 512),
