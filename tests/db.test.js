@@ -48,6 +48,22 @@ test("settings round trip and defaults", async () => {
   assert.equal(cleared.geminiApiKey, null);
 });
 
+test("image store round trip and listing", async () => {
+  const { saveImage, getImage, deleteImage, listImages } = await import("../js/data/images.js");
+  const blob = new Blob([new Uint8Array([9, 8, 7])], { type: "image/webp" });
+  const other = new Blob([new Uint8Array([1])], { type: "image/png" });
+  await saveImage("ev1", blob);
+  await saveImage("ev2", other);
+  const listed = await listImages();
+  assert.deepEqual(Object.keys(listed).sort(), ["ev1", "ev2"]);
+  assert.equal(listed.ev1.type, "image/webp");
+  const got = await getImage("ev1");
+  assert.ok(got instanceof Blob);
+  await deleteImage("ev2");
+  assert.equal(await getImage("ev2"), null);
+  await deleteImage("ev1");
+});
+
 test("defaultWeekStartsOn returns 0 or 1", () => {
   const start = defaultWeekStartsOn();
   assert.ok(start === 0 || start === 1);

@@ -42,25 +42,29 @@ export async function deleteImage(eventId) {
 }
 
 /**
- * All image attachments as event-id -> Blob, for export. The cursor
- * fills the local map across the transaction; withTransaction resolves
- * the shared result on completion.
+ * All image attachments as event-id -> Blob, for export.
+ * getAll/getAllKeys iterate in the same (key) order, so index pairing
+ * is safe. Two reads in two transactions keep the request plumbing of
+ * withTransaction intact (no manual cursor handler juggling).
  * @returns {Promise<Record<string, Blob>>}
  */
 export async function listImages() {
+  const values = await withTransaction(["images"], "readonly", (stores) =>
+    stores.images.getAll(),
+  );
+  const keys = await withTransaction(["images"], "readonly", (stores) =>
+    stores.images.getAllKeys(),
+  );
   /** @type {Record<string, Blob>} */
   const out = {};
-  return withTransaction(["images"], "readonly", (stores) => {
-    const request = stores.images.openCursor();
-    request.onsuccess = () => {
-      const cursor = request.result;
-      if (cursor) {
-        out[/** @type {string} */ (cursor.key)] = /** @type {Blob} */ (cursor.value);
-        cursor.continue();
-      }
-    };
-    return request;
-  }).then(() => out);
+  if (Array.isArray(values) && Array.isArray(keys)) {
+    const until = Math.min(values.length, keys.length);
+    for (let i = 0; i < until; i += 1) {
+      const id = /** @type {IDBValidKey} */ (keys[i]);
+      out[String(id)] = /** @type {Blob} */ (values[i]);
+    }
+  }
+  return out;
 }
 
 /**

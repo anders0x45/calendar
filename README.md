@@ -36,7 +36,7 @@ The app itself still runs without `npm install`.
 | 6. Week/day views | done |
 | 7. Recurrence UI | done |
 | 8. Image generation + settings | done |
-| 9. Export/import | pending |
+| 9. Export/import | done |
 | 10. PWA + offline | pending |
 | 11. Accessibility + polish | pending |
 
@@ -84,5 +84,12 @@ The app itself still runs without `npm install`.
   only, never logged or exported), week start, default duration, 24-hour
   time toggle, auto-art toggle, storage estimate, and a guarded "reset
   database" (custom confirm sheet; wipes events + images).
+- Export/import: the backup envelope is `{app: "calendar", version: 1,
+  exportedAt, events, images}` with images as base64; import validates
+  every record with validateEventRecord and upserts by id, reporting
+  skips. The Gemini API key is never exported or logged.
+- The events-status/image pairing means an import of "ready" events
+  brings its own artwork blobs along (or falls back to placeholders if
+  the envelope has none).
 - Placeholders: PWA icons currently use the SVG app icon; PNG icons are the
   milestone-10 replacement. The service worker is a stub until milestone 10.

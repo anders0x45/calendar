@@ -7,8 +7,10 @@
 
 import { getState, setState, subscribe } from "../state.js";
 import { saveSettings, loadSettings } from "../data/settings.js";
-import { deleteAllEvents } from "../data/events.js";
-import { deleteAllImages } from "../data/images.js";
+import { deleteAllEvents, saveEvent } from "../data/events.js";
+import { deleteAllImages, listImages, putImages } from "../data/images.js";
+import { buildExport, decodeImages, exportFilename, parseImportPayload } from "../lib/backup.js";
+import { refreshEvents } from "./refresh.js";
 import { openSheet, renderSheetHead } from "./sheet.js";
 import { showToast } from "./toast.js";
 
@@ -176,7 +178,7 @@ function artSection() {
   return col;
 }
 
-/** Archive buttons — handlers arrive with milestone 9. */
+/** Archive buttons: export writes a JSON file, import upserts events. */
 function archiveSection() {
   const grid = document.createElement("div");
   grid.className = "settings-button-grid";
@@ -185,22 +187,96 @@ function archiveSection() {
   exportBtn.type = "button";
   exportBtn.className = "btn";
   exportBtn.textContent = "[ EXPORT JSON ]";
-  exportBtn.disabled = true;
-  exportBtn.title = "Available in the next milestone";
+  exportBtn.addEventListener("click", () => {
+    runExport(exportBtn).catch((error) => {
+      console.error("export failed", error);
+      showToast({ message: "Export failed", isError: true });
+      exportBtn.disabled = false;
+    });
+  });
 
   const importBtn = document.createElement("button");
   importBtn.type = "button";
   importBtn.className = "btn";
   importBtn.textContent = "[ IMPORT JSON ]";
-  importBtn.disabled = true;
-  importBtn.title = "Available in the next milestone";
+  importBtn.addEventListener("click", () => {
+    void runImportFlow(importBtn);
+  });
 
   grid.append(exportBtn, importBtn);
   const col = document.createElement("div");
   col.className = "settings-col";
-  col.append(grid, settingsHint("Backup lives entirely on this device; nothing is uploaded."));
+  col.append(grid, settingsHint("Backup is a plain JSON file of your events and artwork; keep it somewhere safe."));
   storageEstimateLine().then((line) => col.append(line));
   return col;
+}
+
+/** Build + download the backup file. */
+async function runExport(exportBtn) {
+  exportBtn.disabled = true;
+  const { events } = getState();
+  const images = await listImages();
+  const envelope = await buildExport({ events, images });
+  const blob = new Blob([JSON.stringify(envelope)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = exportFilename();
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  exportBtn.disabled = false;
+  showToast({ message: "Backup downloaded.", subtext: `${events.length} events` });
+}
+
+/**
+ * File picker -> validate -> upsert events + decode/store images.
+ * @param {HTMLButtonElement} importBtn
+ */
+async function runImportFlow(importBtn) {
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.accept = "application/json,.json";
+  fileInput.setAttribute("aria-hidden", "true");
+  fileInput.style.display = "none";
+  document.body.append(fileInput);
+  fileInput.click();
+  fileInput.addEventListener("change", async () => {
+    fileInput.remove();
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    importBtn.disabled = true;
+    try {
+      const text = await file.text();
+      const parsed = parseImportPayload(text);
+      if (!parsed.ok) {
+        showToast({ message: `Import rejected: ${parsed.reason}`, isError: true });
+        return;
+      }
+      await putImages(decodeImages(parsed.images));
+      let imported = 0;
+      for (const event of parsed.events) {
+        try {
+          await saveEvent(event);
+          imported += 1;
+        } catch (error) {
+          console.error("import event failed", error);
+        }
+      }
+      await refreshEvents();
+      const skipped = parsed.skipped + (parsed.events.length - imported);
+      showToast({
+        message: `Imported ${imported} event${imported === 1 ? "" : "s"}.`,
+        subtext: skipped > 0 ? `Skipped ${skipped} invalid` : "All records valid",
+      });
+    } catch (error) {
+      console.error("import failed", error);
+      showToast({ message: "Import failed", isError: true });
+    } finally {
+      importBtn.disabled = false;
+    }
+  });
 }
 
 /** Guarded factory reset. */
