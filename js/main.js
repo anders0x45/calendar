@@ -50,7 +50,6 @@ async function main() {
 
   deckHost.replaceChildren(
     mountControlDeck({
-      onSwitch: (view) => navigate(view),
       onOpenPicker: () => openPickerSheet(() => {}),
       onPrev: () => shiftPeriod(-1),
       onNext: () => shiftPeriod(1),

@@ -1,13 +1,14 @@
 /**
  * Shared control deck above month/week/day views: prev/next buttons, a
- * tappable title that opens the picker, Today, and the view switcher.
- * The deck owns no rendering logic; callers pass lifecycle callbacks.
+ * tappable title that opens the picker, and Today. View switching lives
+ * in the bottom nav; the deck owns no rendering logic. Callers pass
+ * lifecycle callbacks.
  */
 
 import { getState, setState, subscribe } from "../state.js";
 import { addDays, addMonths, startOfWeek, todayKey } from "../lib/dates.js";
 
-/** @typedef {{onSwitch: (v: "month"|"week"|"day") => void, onOpenPicker: () => void, onPrev: () => void, onNext: () => void}} DeckHooks */
+/** @typedef {{onOpenPicker: () => void, onPrev: () => void, onNext: () => void}} DeckHooks */
 
 const CHEVRON_PREV =
   '<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5.5 8.5 12 15 18.5l-1.4 1.4L5.7 12l7.9-7.9L15 5.5Z"/></svg>';
@@ -56,33 +57,11 @@ export function mountControlDeck(hooks) {
 
   row.append(prev, next, titleBtn, today);
 
-  const segmented = document.createElement("div");
-  segmented.className = "segmented";
-  segmented.setAttribute("role", "group");
-  segmented.setAttribute("aria-label", "View");
-  for (const [value, label] of [["day", "Day"], ["week", "Week"], ["month", "Month"]]) {
-    const opt = document.createElement("button");
-    opt.type = "button";
-    opt.className = "segmented__option";
-    opt.dataset.switch = /** @type {string} */ (value);
-    opt.textContent = /** @type {string} */ (label).toUpperCase();
-    opt.addEventListener("click", () =>
-      hooks.onSwitch(/** @type {"month"|"week"|"day"} */ (value)),
-    );
-    segmented.append(opt);
-  }
-
-  root.append(row, segmented);
+  root.append(row);
 
   const refresh = () => {
     const { view, cursor } = getState();
     titleText.textContent = periodTitle(view, cursor);
-    for (const opt of segmented.querySelectorAll(".segmented__option")) {
-      if (opt instanceof HTMLElement) {
-        opt.setAttribute("aria-pressed", opt.dataset.switch === view ? "true" : "false");
-        opt.classList.toggle("is-selected", opt.dataset.switch === view);
-      }
-    }
   };
   subscribe(refresh);
   refresh();

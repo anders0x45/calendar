@@ -71,9 +71,12 @@ The app itself still runs without `npm install`.
   grouped by day with event dot previews; day view: all-day well plus a
   24-hour timeline with cards positioned at the viewer's converted time
   and a "now" line on today. Both share the agenda-card component.
-- The router is the single writer of `state.view`, which drives the
-  deck's segmented control, subtitle, and period title (week shows the
-  "OCT 12 – OCT 18" range, day the exact date).
+- Chrome is single-purpose: the bottom nav is the only month/week/day
+  switcher; the header gear is the only settings entry. On the settings
+  screen the same header button renders as a back chevron ("Back to
+  calendar") returning to the last calendar view. The router is the
+  single writer of `state.view`, which drives the subtitle and period
+  title (week shows the "OCT 12 – OCT 18" range, day the exact date).
 - Image generation: new events (auto-art on) start with imageStatus
   "pending"; an idle-time job calls the Gemini image model with the key
   from settings, resizes to <=512px WebP into the images store, then
