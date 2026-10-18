@@ -32,11 +32,7 @@ export const TOAST_MS = 4500;
 /** Restore point after deleting recurring events. */
 export const DELETION_MODES = { ONLY: "only", ALL: "all" };
 
-/** Cloudflare Workers AI model kept in one place for easy swapping. */
-export const IMAGE_MODEL_PATH = "@cf/black-forest-labs/flux-1-schnell";
-
-/** Image generation REST endpoint shape (Cloudflare AI REST API). */
-export const IMAGE_API_BASE = "https://api.cloudflare.com/client/v4";
+/** Shared art bridge response contract lives in bridge/worker.js. */
 
 /** Diffusion steps for flux-1-schnell (4 is the documented fast setting). */
 export const IMAGE_GEN_STEPS = 4;

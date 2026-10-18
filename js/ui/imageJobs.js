@@ -40,10 +40,10 @@ function kick() {
 /** @returns {Promise<boolean>} true when work was done (re-kick may follow) */
 async function runOnce() {
   const { settings, events } = getState();
-  const apiToken = settings?.cloudflareApiToken ?? null;
-  const accountId = settings?.cloudflareAccountId ?? null;
+  const bridgeUrl = settings?.artBridgeUrl ?? null;
+  const artSecret = settings?.artSecret ?? null;
   const autoArt = settings?.autoArt ?? true;
-  const pending = apiToken && accountId && autoArt ? pickPending(events).slice(0, 1) : [];
+  const pending = bridgeUrl && artSecret && autoArt ? pickPending(events).slice(0, 1) : [];
   if (pending.length === 0) {
     running = false;
     if (pendingKick) {
@@ -58,8 +58,8 @@ async function runOnce() {
       await processOne(event, {
         generate: (e) =>
           generateEventImage({
-            apiToken: /** @type {string} */ (apiToken),
-            accountId: /** @type {string} */ (accountId),
+            bridgeUrl: /** @type {string} */ (bridgeUrl),
+            artSecret: /** @type {string} */ (artSecret),
             title: e.title,
           }),
         saveImage,

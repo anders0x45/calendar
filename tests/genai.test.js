@@ -3,15 +3,10 @@ import assert from "node:assert/strict";
 
 const {
   buildPrompt,
-  endpointUrl,
   extractImageResult,
   base64ToBlob,
 } = await import("../js/lib/genai.js");
-const {
-  IMAGE_MODEL_PATH,
-  IMAGE_API_BASE,
-  IMAGE_GEN_STEPS,
-} = await import("../js/config.js");
+const { IMAGE_GEN_STEPS } = await import("../js/config.js");
 
 test("buildPrompt fills the title into the template", () => {
   const prompt = buildPrompt("Team Pride Retro");
@@ -19,66 +14,71 @@ test("buildPrompt fills the title into the template", () => {
   assert.ok(prompt.includes("Team Pride Retro"));
 });
 
-test("endpointUrl targets the Cloudflare account model path", () => {
-  const url = endpointUrl("abc123");
-  assert.equal(url, `${IMAGE_API_BASE}/accounts/abc123/ai/run/${IMAGE_MODEL_PATH}`);
-});
-
-test("endpointUrl encodes special characters in the account id", () => {
-  assert.ok(!endpointUrl("../evil").includes("/accounts/../evil"));
-});
-
-test("generateEventImage posts prompt + steps and parses the image", async () => {
+test("generateEventImage posts prompt + steps to the bridge and parses the image", async () => {
   const { generateEventImage } = await import("../js/lib/genai.js");
   /** @type {any[]} */
-  const bodies = [];
-  const fake = async (_url, init) => {
-    bodies.push(JSON.parse(/** @type {any} */ (init.body)));
+  const calls = [];
+  const fake = async (url, init) => {
+    calls.push({
+      url,
+      secret: /** @type {any} */ (init).headers["x-art-secret"],
+      body: JSON.parse(/** @type {any} */ (init).body),
+    });
     return new Response(
-      JSON.stringify({
-        success: true,
-        result: { image: "QUJD", msg: "Done in 42ms" },
-      }),
+      JSON.stringify({ success: true, image: "QUJD" }),
       { status: 200, headers: { "content-type": "application/json" } },
     );
   };
   const result = await generateEventImage(
-    { apiToken: "tok", accountId: "acc", title: "Retro Night" },
+    { bridgeUrl: "https://bridge.example/workers.dev", artSecret: "s3cret", title: "Retro Night" },
     // @ts-expect-error test fetch stub
     fake,
   );
   assert.equal(result.ok, true);
   if (result.ok) assert.equal(result.blob.type, "image/jpeg");
-  assert.equal(bodies[0].steps, IMAGE_GEN_STEPS);
-  assert.ok(bodies[0].prompt.includes("Retro Night"));
+  assert.equal(calls[0].url, "https://bridge.example/workers.dev");
+  assert.equal(calls[0].secret, "s3cret");
+  assert.equal(calls[0].body.steps, IMAGE_GEN_STEPS);
+  assert.ok(calls[0].body.prompt.includes("Retro Night"));
 });
 
-test("generateEventImage surfaces Workers AI errors", async () => {
+test("generateEventImage surfaces bridge errors", async () => {
   const { generateEventImage } = await import("../js/lib/genai.js");
   const fake = async () =>
-    new Response(
-      JSON.stringify({ success: false, errors: [{ code: 7003, message: "Authentication error" }] }),
-      { status: 403, headers: { "content-type": "application/json" } },
-    );
+    new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401,
+      headers: { "content-type": "application/json" },
+    });
   const result = await generateEventImage(
-    { apiToken: "bad", accountId: "acc", title: "x" },
+    { bridgeUrl: "https://bridge.example", artSecret: "bad", title: "x" },
     // @ts-expect-error test fetch stub
     fake,
   );
   assert.equal(result.ok, false);
-  if (!result.ok) assert.ok(result.reason.includes("Authentication error"));
+  if (!result.ok) assert.equal(result.reason, "unauthorized");
 });
 
-test("extractImageResult explains API errors and empty responses", () => {
-  const err = extractImageResult({
-    success: false,
-    errors: [{ message: "Authentication error" }],
-  });
-  assert.ok("reason" in err && err.reason.includes("Authentication error"));
+test("generateEventImage reports network failures as reasons", async () => {
+  const { generateEventImage } = await import("../js/lib/genai.js");
+  const fake = async () => {
+    throw new Error("Failed to fetch");
+  };
+  const result = await generateEventImage(
+    { bridgeUrl: "https://bridge.example", artSecret: "x", title: "y" },
+    // @ts-expect-error test fetch stub
+    fake,
+  );
+  assert.equal(result.ok, false);
+  if (!result.ok) assert.equal(result.reason, "Failed to fetch");
+});
+
+test("extractImageResult explains errors, empty bodies and missing images", () => {
+  const err = extractImageResult({ error: "unauthorized" });
+  assert.ok("reason" in err && err.reason === "unauthorized");
   assert.ok("reason" in extractImageResult(null));
   assert.ok("reason" in extractImageResult({}));
-  assert.ok("reason" in extractImageResult({ success: true, result: { msg: "queued" } }));
-  const ok = extractImageResult({ success: true, result: { image: "QUJD" } });
+  assert.ok("reason" in extractImageResult({ success: true, image: 42 }));
+  const ok = extractImageResult({ success: true, image: "QUJD" });
   assert.ok(!("reason" in ok));
   if (!("reason" in ok)) {
     assert.equal(ok.mimeType, "image/jpeg");
