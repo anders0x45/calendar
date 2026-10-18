@@ -32,11 +32,10 @@ export const TOAST_MS = 4500;
 /** Restore point after deleting recurring events. */
 export const DELETION_MODES = { ONLY: "only", ALL: "all" };
 
-/** Gemini image generation model kept in one place for easy swapping. */
-export const IMAGE_MODEL_ID = "gemini-2.0-flash-preview-image-generation";
+/** Shared art bridge response contract lives in bridge/worker.js. */
 
-/** Image generation REST endpoint shape (Google Generative Language API). */
-export const IMAGE_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+/** Diffusion steps for flux-1-schnell (4 is the documented fast setting). */
+export const IMAGE_GEN_STEPS = 4;
 
 /** Background phase used for generated illustrations. */
 export const IMAGE_PROMPT_TEMPLATE =

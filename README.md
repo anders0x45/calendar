@@ -38,7 +38,7 @@ The app itself still runs without `npm install`.
 | 8. Image generation + settings | done |
 | 9. Export/import | done |
 | 10. PWA + offline | done |
-| 11. Accessibility + polish | pending |
+| 11. Accessibility + polish | done |
 
 ## Development
 
@@ -78,19 +78,22 @@ The app itself still runs without `npm install`.
   single writer of `state.view`, which drives the subtitle and period
   title (week shows the "OCT 12 – OCT 18" range, day the exact date).
 - Image generation: new events (auto-art on) start with imageStatus
-  "pending"; an idle-time job calls the Gemini image model with the key
-  from settings, resizes to <=512px WebP into the images store, then
+  "pending"; an idle-time job POSTs {prompt, steps} to a CORS-enabled
+  Cloudflare Worker bridge (bridge/ in the repo) that runs Workers AI
+  flux-1-schnell server-side; the app resizes to <=512px WebP into the
+  images store, then
   flips status ready/failed (one retry). Detail banners show the stored
   blob when ready, GEN_FAILED + [ REGENERATE ] when not; generation
   failure never blocks any other functionality.
-- Settings screen: Gemini API key (password field with reveal, device
-  only, never logged or exported), week start, default duration, 24-hour
-  time toggle, auto-art toggle, storage estimate, and a guarded "reset
-  database" (custom confirm sheet; wipes events + images).
+- Settings screen: art bridge URL + shared secret (password field with
+  reveal, device only, never logged or exported), week start, default
+  duration, 24-hour time toggle, auto-art toggle, storage estimate, and
+  a guarded "reset database" (custom confirm sheet; wipes events +
+  images).
 - Export/import: the backup envelope is `{app: "calendar", version: 1,
   exportedAt, events, images}` with images as base64; import validates
   every record with validateEventRecord and upserts by id, reporting
-  skips. The Gemini API key is never exported or logged.
+  skips. The bridge URL and secret are never exported or logged.
 - The events-status/image pairing means an import of "ready" events
   brings its own artwork blobs along (or falls back to placeholders if
   the envelope has none).
@@ -102,3 +105,11 @@ The app itself still runs without `npm install`.
   as self-hosted PNG (192/512 + maskable renders of the SVG icon).
   Verified by loading the whole app from cache with the network
   disabled.
+- Accessibility: all icon-only buttons carry aria-labels (0 unlabeled in
+  a live sweep); sheets are `role="dialog"` modal with focus trap,
+  Escape close, and opener-focus restore; toasts use role="status"/
+  "alert". Keyboard: ArrowLeft/Right move the period, Tab shows a 2px
+  accent focus-visible outline, 44px minimum touch targets everywhere.
+  Text inputs are 16px to prevent iOS zoom-on-focus. prefers-reduced-
+  motion globally collapses animations/transitions. Verified at 390px
+  with zero console errors in both normal and reduced-motion modes.

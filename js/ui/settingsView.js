@@ -55,21 +55,43 @@ function sectionCard(title, build) {
   return card;
 }
 
-/** API key row with reveal toggle. */
+/** Art bridge endpoint + shared secret (revealable). */
 function apiSection() {
+  const col = document.createElement("div");
+  col.className = "settings-col";
+
+  const urlInput = document.createElement("input");
+  urlInput.type = "url";
+  urlInput.className = "settings-key-input";
+  urlInput.placeholder = "https://chrono-art-bridge.<subdomain>.workers.dev";
+  urlInput.autocomplete = "off";
+  urlInput.spellcheck = false;
+  urlInput.setAttribute("aria-label", "Art bridge URL");
+  urlInput.addEventListener("change", async () => {
+    await saveSettings({ artBridgeUrl: urlInput.value.trim() || null });
+    setState({ settings: await loadSettings() });
+    showToast({ message: urlInput.value.trim() ? "Bridge URL saved." : "Bridge URL cleared." });
+  });
+
+  const urlHint = document.createElement("p");
+  urlHint.className = "settings-hint";
+  urlHint.textContent =
+    "Art bridge worker URL (bridge/ in the repo; see bridge/README.md). Used for event artwork.";
+
   const row = document.createElement("div");
   row.className = "settings-row";
 
-  const input = document.createElement("input");
-  input.type = "password";
-  input.className = "settings-key-input";
-  input.placeholder = "AIza…";
-  input.autocomplete = "off";
-  input.spellcheck = false;
-  input.setAttribute("aria-label", "Gemini API key");
-  input.addEventListener("change", async () => {
-    await saveSettings({ geminiApiKey: input.value.trim() || null });
-    showToast({ message: input.value.trim() ? "API key saved." : "API key cleared." });
+  const secretInput = document.createElement("input");
+  secretInput.type = "password";
+  secretInput.className = "settings-key-input";
+  secretInput.placeholder = "shared secret…";
+  secretInput.autocomplete = "off";
+  secretInput.spellcheck = false;
+  secretInput.setAttribute("aria-label", "Art bridge secret");
+  secretInput.addEventListener("change", async () => {
+    await saveSettings({ artSecret: secretInput.value.trim() || null });
+    setState({ settings: await loadSettings() });
+    showToast({ message: secretInput.value.trim() ? "Secret saved." : "Secret cleared." });
   });
 
   const reveal = document.createElement("button");
@@ -78,28 +100,41 @@ function apiSection() {
   reveal.setAttribute("aria-pressed", "false");
   reveal.textContent = "[ REVEAL ]";
   reveal.addEventListener("click", () => {
-    const shown = input.type === "password";
-    input.type = shown ? "text" : "password";
+    const shown = secretInput.type === "password";
+    secretInput.type = shown ? "text" : "password";
     reveal.textContent = shown ? "[ HIDE ]" : "[ REVEAL ]";
     reveal.setAttribute("aria-pressed", shown ? "true" : "false");
   });
 
-  const hint = document.createElement("p");
-  hint.className = "settings-hint";
-  hint.textContent =
-    "Paste a Gemini API key (aistudio.google.com). Stored on device only, used for event artwork.";
+  const secretHint = document.createElement("p");
+  secretHint.className = "settings-hint";
+  secretHint.textContent =
+    "ART_SECRET of the bridge worker (x-art-secret header). Stored on device only.";
 
-  row.append(input, reveal);
+  row.append(secretInput, reveal);
 
-  const next = document.createElement("div");
-  next.className = "settings-col";
-  next.append(row, hint);
+  /** @param {string} text @returns {HTMLSpanElement} */
+  const label = (text) => {
+    const span = document.createElement("span");
+    span.className = "form-label";
+    span.textContent = text;
+    return span;
+  };
+  col.append(
+    label("ART BRIDGE URL"),
+    urlInput,
+    urlHint,
+    label("SHARED SECRET"),
+    row,
+    secretHint,
+  );
 
   loadSettings().then((settings) => {
-    input.value = settings.geminiApiKey ?? "";
+    urlInput.value = settings.artBridgeUrl ?? "";
+    secretInput.value = settings.artSecret ?? "";
   });
 
-  return next;
+  return col;
 }
 
 /** Week start, default duration, time format. */

@@ -1,0 +1,11 @@
+name = "chrono-art-bridge"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[ai]
+binding = "AI"
+
+# Deploy-time: set the shared secret outside git with
+#   npx wrangler secret put ART_SECRET
+# (the deployed worker reads env.ART_SECRET; requests send it as the
+#  x-art-secret header)

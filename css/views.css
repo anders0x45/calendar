@@ -1202,7 +1202,7 @@
   min-height: var(--tap-target);
   padding: 0 var(--space-sm);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 16px; /* prevents iOS zoom */
   letter-spacing: 0.06em;
   background: #fff;
   border: var(--bevel-width) solid;

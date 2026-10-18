@@ -37,15 +37,26 @@ test("openDb creates the calendar database with expected stores", async () => {
 test("settings round trip and defaults", async () => {
   const loaded = await loadSettings();
   assert.deepEqual(loaded, emptySettings());
-  const saved = await saveSettings({ geminiApiKey: "secret", lastView: "week" });
-  assert.equal(saved.geminiApiKey, "secret");
+  const saved = await saveSettings({
+    artBridgeUrl: "https://chrono-art-bridge.test.workers.dev",
+    artSecret: "secret-token",
+    lastView: "week",
+  });
+  assert.equal(saved.artBridgeUrl, "https://chrono-art-bridge.test.workers.dev");
+  assert.equal(saved.artSecret, "secret-token");
   assert.equal(saved.lastView, "week");
   const reloaded = await loadSettings();
-  assert.equal(reloaded.geminiApiKey, "secret");
+  assert.equal(reloaded.artBridgeUrl, "https://chrono-art-bridge.test.workers.dev");
+  assert.equal(reloaded.artSecret, "secret-token");
   assert.equal(reloaded.lastView, "week");
-  // empty-string key is normalized to null (never allow empty keeper)
-  const cleared = await saveSettings({ geminiApiKey: "" });
-  assert.equal(cleared.geminiApiKey, null);
+  // empty-string credentials are normalized to null (never allow empty keeper)
+  const cleared = await saveSettings({ artBridgeUrl: "", artSecret: "" });
+  assert.equal(cleared.artBridgeUrl, null);
+  assert.equal(cleared.artSecret, null);
+  // the retired Gemini field is dropped on load
+  await saveSettings({ geminiApiKey: "legacy" });
+  const postLegacy = await loadSettings();
+  assert.equal("geminiApiKey" in postLegacy, false);
 });
 
 test("image store round trip and listing", async () => {
