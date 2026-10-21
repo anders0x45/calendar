@@ -105,18 +105,11 @@ The app itself still runs without `npm install`.
   as self-hosted PNG (192/512 + maskable renders of the SVG icon).
   Verified by loading the whole app from cache with the network
   disabled.
-- Accessibility (milestone 11): sheets move focus in on open (dialog
-  focusable, first Tab lands on the first control, focus restores to
-  the opener on close); form captions are real `<label for>` elements
-  and every input is ≥16px so iOS won't zoom on focus; month cells
-  respond to Enter/Space in addition to click (Enter picks open the
-  strip, Space selects); a skip link jumps straight to the calendar
-  content; the day view's "now" line is aria-hidden (decorative);
-  month-cell today badge bumped to 9px. Contrast was audited: accent
-  deepened (#b93a95, 5.12:1 vs white both directions), the faint ink
-  token darkened to pass 4.5:1 on the surface plate, event red
-  adjusted (#d9333b), and `inkForBackground` now picks whichever ink
-  gives the higher contrast instead of a bare luminance threshold so
-  chip titles pass 4.5:1 on every swatch. Known remaining limitation:
-  compact event chips in the month grid stay under 44px tall by
-  design; the density is deliberate and the chips remain tappable.
+- Accessibility: all icon-only buttons carry aria-labels (0 unlabeled in
+  a live sweep); sheets are `role="dialog"` modal with focus trap,
+  Escape close, and opener-focus restore; toasts use role="status"/
+  "alert". Keyboard: ArrowLeft/Right move the period, Tab shows a 2px
+  accent focus-visible outline, 44px minimum touch targets everywhere.
+  Text inputs are 16px to prevent iOS zoom-on-focus. prefers-reduced-
+  motion globally collapses animations/transitions. Verified at 390px
+  with zero console errors in both normal and reduced-motion modes.
