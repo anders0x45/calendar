@@ -26,14 +26,16 @@
   /* Ink */
   --color-ink: #1e1e1e;
   --color-ink-soft: #5c5850;
-  --color-ink-faint: #a8a49c;
+  /* faint meets 4.5:1 on the surface plate (checked); used for subtle
+     text and light rules */
+  --color-ink-faint: #6d675f;
 
   /* Bevel edges */
   --color-bevel-highlight: #ffffff;
   --color-bevel-shadow: #1a1a1a;
 
-  /* Accents */
-  --color-accent: #c3469e;
+  /* Accents — accent keeps 5.12:1 against white ink both ways */
+  --color-accent: #b93a95;
   --color-on-accent: #ffffff;
   --color-accent-highlight: #e178c1;
   --color-accent-well: #ffd8ec;
@@ -46,8 +48,8 @@
   --color-sat: #006c45;
   --color-sun: #ba1a1a;
 
-  /* Event category colors */
-  --event-red: #e5484d;
+  /* Event category colors — each pair passes WCAG AA with the best ink */
+  --event-red: #d9333b;
   --event-green: #3da35d;
   --event-yellow: #f2c230;
   --event-orange: #e2861f;

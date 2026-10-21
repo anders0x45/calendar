@@ -4,7 +4,7 @@
 
 /** @type {Record<string, string>} Preset event swatches (see css/tokens.css). */
 export const EVENT_COLORS = {
-  red: "#e5484d",
+  red: "#d9333b",
   green: "#3da35d",
   yellow: "#f2c230",
   orange: "#e2861f",

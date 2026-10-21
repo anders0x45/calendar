@@ -484,7 +484,7 @@ function footer() {
   wrap.className = "settings-footer";
   const line1 = document.createElement("div");
   line1.className = "settings-footer__build";
-  line1.textContent = "CHRONO CALENDAR v1.0 (MILESTONE 8)";
+  line1.textContent = "CHRONO CALENDAR v1.1 (MILESTONE 11)";
   const line2 = document.createElement("span");
   line2.className = "settings-footer__station";
   line2.textContent = "STATION-ID: LOCAL_DEVICE // ZERO TELEMETRY";

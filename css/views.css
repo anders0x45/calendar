@@ -159,13 +159,13 @@
 }
 
 .month-cell.is-selected .month-cell__day {
-  color: var(--color-accent-well);
+  color: var(--color-on-accent);
 }
 
 .month-cell__today {
   margin-right: auto;
   font-family: var(--font-mono);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
   padding: 0 3px;
@@ -1202,7 +1202,7 @@
   min-height: var(--tap-target);
   padding: 0 var(--space-sm);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 16px; /* prevents iOS zoom */
   letter-spacing: 0.06em;
   background: #fff;
   border: var(--bevel-width) solid;

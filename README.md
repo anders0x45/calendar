@@ -38,7 +38,7 @@ The app itself still runs without `npm install`.
 | 8. Image generation + settings | done |
 | 9. Export/import | done |
 | 10. PWA + offline | done |
-| 11. Accessibility + polish | pending |
+| 11. Accessibility + polish | done |
 
 ## Development
 
@@ -97,7 +97,7 @@ The app itself still runs without `npm install`.
 - The events-status/image pairing means an import of "ready" events
   brings its own artwork blobs along (or falls back to placeholders if
   the envelope has none).
-- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v2`)
+- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v5`)
   and serves it cache-first; image-generation API calls are never
   intercepted and POSTs bypass the worker. Updates activate immediately
   (skipWaiting on install) and an upgraded page reloads itself once via
@@ -105,3 +105,18 @@ The app itself still runs without `npm install`.
   as self-hosted PNG (192/512 + maskable renders of the SVG icon).
   Verified by loading the whole app from cache with the network
   disabled.
+- Accessibility (milestone 11): sheets move focus in on open (dialog
+  focusable, first Tab lands on the first control, focus restores to
+  the opener on close); form captions are real `<label for>` elements
+  and every input is ≥16px so iOS won't zoom on focus; month cells
+  respond to Enter/Space in addition to click (Enter picks open the
+  strip, Space selects); a skip link jumps straight to the calendar
+  content; the day view's "now" line is aria-hidden (decorative);
+  month-cell today badge bumped to 9px. Contrast was audited: accent
+  deepened (#b93a95, 5.12:1 vs white both directions), the faint ink
+  token darkened to pass 4.5:1 on the surface plate, event red
+  adjusted (#d9333b), and `inkForBackground` now picks whichever ink
+  gives the higher contrast instead of a bare luminance threshold so
+  chip titles pass 4.5:1 on every swatch. Known remaining limitation:
+  compact event chips in the month grid stay under 44px tall by
+  design; the density is deliberate and the chips remain tappable.

@@ -4,8 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#dedede" />
+  <meta name="description" content="Chrono.exe — a phone-first, local-only calendar. All data stays on your device." />
   <title>Chrono.exe</title>
   <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icons/app-icon-192.png" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="css/tokens.css" />
   <link rel="stylesheet" href="css/base.css" />
@@ -21,6 +23,7 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#view-root">Skip navigation to calendar</a>
   <header class="app-header">
     <div class="app-header__brand">
       <img src="icons/app-icon.svg" alt="" class="app-header__icon" width="32" height="32" />
@@ -36,7 +39,7 @@
     </div>
   </header>
 
-  <main id="view-root" class="view-root" aria-live="polite"></main>
+  <main id="view-root" class="view-root" aria-live="polite" tabindex="-1"></main>
 
   <button type="button" id="btn-fab" class="fab" aria-label="New event">
     <svg class="icon icon--lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/></svg>

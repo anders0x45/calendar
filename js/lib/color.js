@@ -19,5 +19,10 @@ export function inkForBackground(hex) {
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   };
   const luminance = 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
-  return luminance > 0.35 ? "#1e1e1e" : "#ffffff";
+  // Pick whichever ink survives the contrast check; e.g. green/yellow
+  // chip titles read better in dark ink even though their backgrounds
+  // sit just above the old 0.35 luminance cutoff.
+  const darkContrast = (luminance + 0.05) / 0.0635;
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  return darkContrast >= whiteContrast ? "#1e1e1e" : "#ffffff";
 }

@@ -55,12 +55,13 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
 
   const allDayToggle = input("checkbox", {}, draft.allDay);
   allDayToggle.className = "toggle";
-  const timeInput = input("time", { value: existing?.time ?? "09:00" });
-  const dateInput = input("date", { value: existing?.date ?? defaultDate ?? todayKey() });
+  const timeInput = input("time", { id: "ev-time", value: existing?.time ?? "09:00" });
+  const dateInput = input("date", { id: "ev-date", value: existing?.date ?? defaultDate ?? todayKey() });
   const dateError = errorLine();
   const timeError = errorLine();
 
   const zoneInput = input("text", {
+    id: "ev-zone",
     value: existing?.timezone ?? userTimeZone(),
     autocomplete: "off",
   });
@@ -73,7 +74,7 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
   }
   const zoneError = errorLine();
 
-  const locationInput = input("url", { placeholder: "https://…", value: existing?.locationLink ?? "" });
+  const locationInput = input("url", { id: "ev-location", placeholder: "https://…", value: existing?.locationLink ?? "" });
   const locationError = errorLine();
 
   const repeatToggle = input("checkbox", {}, draft.repeatOn);
@@ -108,13 +109,13 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
   actions.append(cancelBtn, saveBtn);
 
   body.append(
-    field("TITLE / DESIGNATION", [titleInput, titleError]),
-    field("INDEX MARKER COLOR", [swatchRow]),
+    field("TITLE / DESIGNATION", "ev-title", [titleInput, titleError]),
+    field("INDEX MARKER COLOR", null, [swatchRow]),
     toggleRow(allDayToggle, "All-Day", "Lock agenda for a 24-hour block"),
-    field("DATE", [dateInput, dateError]),
-    field("START TIME", [timeInput, timeError]),
-    field("CHRONO-ZONE", [zoneInput, zoneList, zoneError]),
-    field("LOCATION OR LINK", [locationInput, locationError]),
+    field("DATE", "ev-date", [dateInput, dateError]),
+    field("START TIME", "ev-time", [timeInput, timeError]),
+    field("CHRONO-ZONE", "ev-zone", [zoneInput, zoneList, zoneError]),
+    field("LOCATION OR LINK", "ev-location", [locationInput, locationError]),
     toggleRow(repeatToggle, "Repeat", "Daily, weekly, monthly or yearly"),
     buildRepeatSection(),
     actions,
@@ -134,12 +135,20 @@ export function openEventForm({ existing = null, defaultDate, onClose } = {}) {
     return el;
   }
 
-  function field(labelText, children) {
+  /**
+   * Labeled field block. A real <label for> connects the caption with
+   * its control so assistive tech announces it on focus.
+   * @param {string} labelText
+   * @param {string|null} inputId
+   * @param {HTMLElement[]} children
+   */
+  function field(labelText, inputId, children) {
     const block = document.createElement("div");
     block.className = "field-block raised-plate";
-    const label = document.createElement("span");
+    const label = document.createElement("label");
     label.className = "form-label";
     label.textContent = labelText;
+    if (inputId) label.setAttribute("for", inputId);
     block.append(label, ...children.filter(Boolean));
     return block;
   }
