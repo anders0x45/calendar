@@ -140,6 +140,7 @@ function renderTimeline(timeline, entries, day, viewerZone) {
     const now = new Date();
     const line = document.createElement("div");
     line.className = "day-now-line";
+    line.setAttribute("aria-hidden", "true");
     line.style.top = `${((now.getHours() * 60 + now.getMinutes()) / 60) * HOUR_PX}px`;
     timeline.append(line);
   }

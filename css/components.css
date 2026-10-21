@@ -84,6 +84,28 @@ textarea,
   color: var(--color-ink);
 }
 
+/* ---------- Skip link (visible on keyboard focus) ---------- */
+
+.skip-link {
+  position: absolute;
+  left: var(--space-md);
+  top: calc(var(--safe-top) + var(--space-sm));
+  z-index: 90;
+  padding: var(--space-sm) var(--space-lg);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  box-shadow: var(--shadow-raised);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
 /* ---------- Icons (inline SVG, self-hosted) ---------- */
 
 .icon {

@@ -97,7 +97,7 @@ The app itself still runs without `npm install`.
 - The events-status/image pairing means an import of "ready" events
   brings its own artwork blobs along (or falls back to placeholders if
   the envelope has none).
-- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v2`)
+- PWA/offline: `sw.js` precaches the versioned shell (`chrono-shell-v5`)
   and serves it cache-first; image-generation API calls are never
   intercepted and POSTs bypass the worker. Updates activate immediately
   (skipWaiting on install) and an upgraded page reloads itself once via

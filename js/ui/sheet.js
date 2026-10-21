@@ -1,6 +1,6 @@
 /**
  * Generic bottom-sheet primitive: backdrop, focus trap, Escape and
- * backdroop-click close, focus restore. Content is built by the caller.
+ * backdrop-click close, focus restore. Content is built by the caller.
  */
 
 /**
@@ -16,6 +16,9 @@ export function openSheet({ label, onClose, fullHeight = false }) {
   sheet.setAttribute("role", "dialog");
   sheet.setAttribute("aria-modal", "true");
   sheet.setAttribute("aria-label", label);
+  // Focus lands on the sheet itself so screen readers announce the
+  // dialog; the form sheet re-focuses its first input afterwards.
+  sheet.tabIndex = -1;
 
   const grip = document.createElement("div");
   grip.className = "sheet__grip";
@@ -23,6 +26,7 @@ export function openSheet({ label, onClose, fullHeight = false }) {
 
   backdrop.append(sheet);
   document.body.append(backdrop);
+  sheet.focus({ preventScroll: true });
 
   /** @type {HTMLElement|null} */
   const opener =
@@ -48,6 +52,11 @@ export function openSheet({ label, onClose, fullHeight = false }) {
       ).filter((el) => !el.disabled && el.offsetParent !== null)
     );
     if (focusables.length === 0) return;
+    if (document.activeElement === sheet) {
+      event.preventDefault();
+      focusables[0].focus();
+      return;
+    }
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
     if (event.shiftKey && document.activeElement === first) {

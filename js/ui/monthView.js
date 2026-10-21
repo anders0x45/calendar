@@ -37,6 +37,18 @@ export function mountMonthView() {
   subscribe(render);
   render();
 
+  grid.addEventListener("keydown", (event) => {
+    // role="button" cells: Enter/Space must act like a click/press.
+    if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") return;
+    const cell = /** @type {HTMLElement|null} */ (
+      (/** @type {HTMLElement} */ (event.target)).closest(".month-cell")
+    );
+    if (cell) {
+      event.preventDefault();
+      setState({ selectedDay: cell.dataset.date ?? null });
+    }
+  });
+
   grid.addEventListener("click", (event) => {
     const target = /** @type {HTMLElement} */ (event.target);
     const chipEl = /** @type {HTMLElement} */ (target.closest(".event-chip"));
@@ -129,7 +141,8 @@ function monthCell(key, monthOfCursor, byDay, selectedDay, today) {
   if (!inMonth) cell.classList.add("is-outside");
   if (key === today) cell.classList.add("is-today");
   if (key === selectedDay) cell.classList.add("is-selected");
-  cell.setAttribute("aria-current", key === today ? "date" : "false");
+  if (key === today) cell.setAttribute("aria-current", "date");
+  else cell.setAttribute("aria-pressed", selectedDay === key ? "true" : "false");
 
   const dayHead = document.createElement("div");
   dayHead.className = "month-cell__head";
