@@ -12,13 +12,16 @@ import { openEventForm } from "./ui/eventSheet.js";
 import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
 import { requestPersistentStorage } from "./data/db.js";
+import { initSession } from "./data/accounts.js";
+import { mountSignIn } from "./ui/signin.js";
+import { mountOnboarding } from "./ui/onboarding.js";
 import { todayKey } from "./lib/dates.js";
 import { registerServiceWorker } from "./ui/serviceWorker.js";
 
 /**
- * Entry point: boot storage, mount shared chrome and the last-used view.
- * Milestone 4 ships the month view; week/day render until-then
- * placeholders (replaced in milestone 6).
+ * Entry point: resolve the account session first, then either run the
+ * auth screens (sign-in / blocking username onboarding) or boot storage
+ * and mount shared chrome plus the last-used view.
  */
 
 /** @type {HTMLElement|null} */
@@ -37,6 +40,67 @@ let settingsViewEl = null;
 async function main() {
   requestPersistentStorage();
   registerServiceWorker();
+
+  const root = document.getElementById("view-root");
+  if (!root) return;
+
+  const session = await initSession();
+  switch (session.status) {
+    case "unconfigured":
+      // Placeholder SDK credentials: still fully local, shown clearly.
+      showAuthChrome();
+      root.replaceChildren(
+        mountSignIn({ localOnly: true }, () => {
+          hideAuthChrome();
+          bootCalendar();
+        }),
+      );
+      return;
+    case "signed-out":
+      showAuthChrome();
+      root.replaceChildren(
+        mountSignIn({ error: session.error ?? null }, () => {}),
+      );
+      return;
+    case "onboarding":
+      showAuthChrome();
+      root.replaceChildren(
+        mountOnboarding(session.user, (account) => {
+          setState({ account });
+          hideAuthChrome();
+          bootCalendar();
+        }),
+      );
+      return;
+    default:
+      break;
+  }
+
+  if (session.status === "ready") {
+    setState({ account: session.account });
+  }
+  bootCalendar();
+}
+
+/**
+ * Swap the header action area for the sign-in affordance and hide
+ * calendar chrome while an auth screen owns the viewport.
+ */
+function showAuthChrome() {
+  document.body.classList.add("is-auth");
+  const fab = document.getElementById("btn-fab");
+  if (fab) fab.hidden = true;
+}
+
+/** Restore the normal calendar chrome after auth resolves. */
+function hideAuthChrome() {
+  document.body.classList.remove("is-auth");
+  const fab = document.getElementById("btn-fab");
+  if (fab) fab.hidden = false;
+}
+
+/** The classic boot: storage load, deck, views, router. */
+async function bootCalendar() {
 
   const root = document.getElementById("view-root");
   const fab = document.getElementById("btn-fab");

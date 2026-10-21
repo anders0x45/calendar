@@ -52,3 +52,32 @@ export const IMAGE_GEN_RETRY_DELAY_MS = 2000;
 /** Export envelope. */
 export const EXPORT_APP_ID = "calendar";
 export const EXPORT_VERSION = 1;
+
+/* ---------- Accounts (Firebase phase F2) ---------- */
+
+/** Username character pattern (client mirror of the Firestore rule). */
+export const USERNAME_PATTERN = "^[a-z0-9_]{3,20}$";
+
+/** Username length bounds in characters. */
+export const USERNAME_MIN = 3;
+export const USERNAME_MAX = 20;
+
+/**
+ * Names no account may claim: they collide with routes, storage paths or
+ * support/store surfaces users might reasonably confuse them with.
+ */
+export const RESERVED_USERNAMES = [
+  "admin", "api", "app", "auth", "chrono", "chronoexe", "config",
+  "debug", "docs", "email", "events", "firebase", "google", "help",
+  "images", "index", "info", "invite", "invites", "localhost", "main",
+  "me", "none", "null", "oauth", "owner", "root", "settings", "share",
+  "shared", "signup", "static", "status", "store", "support", "sw",
+  "system", "terms", "test", "this", "undefined", "user", "users",
+  "www", "you",
+];
+
+/** Debounce for live username availability checks, in milliseconds. */
+export const USERNAME_CHECK_DEBOUNCE_MS = 400;
+
+/** How long sign-in redirect errors stay visible on the sign-in screen. */
+export const AUTH_ERROR_MS = 6000;

@@ -141,12 +141,17 @@ First sign-in (or whenever the Firestore user doc lacks a username)
 forces a blocking onboarding screen: slugified suggestion from the
 Google displayName (never email), debounced exact `usernames/{name}`
 availability checks, live states (available / taken / invalid), an
-idempotent profile + default calendar ("My calendar") creation, then an
-atomic claim: one batched write of `usernames/{name}` +
-`users/{uid}.username`. If the batch fails with permission-denied
-(someone took the name between check and write) the UI shows "taken or
-invalid" and lets the user retry. Reserved words are rejected
-client-side (list in `js/config.js`).
+idempotent profile bootstrap (users/{uid} with username null), then an
+atomic claim: one batched write of `usernames/{name}` create +
+users/{uid} partial update (username + settings.activeCalendarId =
+the new default calendar id) + calendars/{id} "My calendar" create.
+The users write must be a partial UPDATE — a full set() re-sends
+createdAt with a fresh serverTimestamp sentinel, which the emulator
+rejects with evaluation errors instead of the intended outcome. If the
+batch fails with permission-denied (someone took the name between
+check and write) the UI shows "taken or invalid" and lets the user
+retry. Reserved words are rejected client-side (list in
+`js/config.js`).
 
 Account menu: avatar, name, (own) email, `@username` with copy button,
 sign out. Sign-out detaches every Firestore listener, terminates

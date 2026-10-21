@@ -7,6 +7,7 @@
 
 import { getState, setState, subscribe } from "../state.js";
 import { saveSettings, loadSettings } from "../data/settings.js";
+import { signOutAccount } from "../data/accounts.js";
 import { deleteAllEvents, saveEvent } from "../data/events.js";
 import { deleteAllImages, listImages, putImages } from "../data/images.js";
 import { buildExport, decodeImages, exportFilename, parseImportPayload } from "../lib/backup.js";
@@ -30,18 +31,119 @@ export function mountSettingsView() {
   heading.append(h2, sub);
 
   const apiCard = sectionCard("// API_CONFIG //", apiSection);
+  const accountCard = sectionCard("// ACCOUNT //", accountSection);
   const prefCard = sectionCard("// PREFERENCES //", preferencesSection);
   const artCard = sectionCard("// AUTO_ART //", artSection);
   const archiveCard = sectionCard("// ARCHIVE & PORTABILITY //", archiveSection);
   const dangerCard = sectionCard("// DANGER_ZONE //", dangerSection);
   apiCard.classList.add("raised-plate");
+  accountCard.classList.add("raised-plate");
   prefCard.classList.add("raised-plate");
   artCard.classList.add("raised-plate");
   archiveCard.classList.add("raised-plate");
   dangerCard.classList.add("raised-plate");
 
-  root.append(heading, apiCard, prefCard, artCard, archiveCard, dangerCard, footer());
+  root.append(heading, apiCard, accountCard, prefCard, artCard, archiveCard, dangerCard, footer());
   return root;
+}
+
+/**
+ * Signed-in identity: avatar, name, email, @username (copy) and sign
+ * out. Hidden entirely in local-device mode (no account configured).
+ */
+function accountSection() {
+  const account = getState().account;
+
+  const col = document.createElement("div");
+  col.className = "settings-col";
+  if (!account) {
+    const local = document.createElement("p");
+    local.className = "settings-hint";
+    local.textContent = "LOCAL DEVICE MODE // NO ACCOUNT CONNECTED";
+    col.append(local);
+    return col;
+  }
+
+  const row = document.createElement("div");
+  row.className = "account-row";
+
+  const avatar = account.photoURL
+    ? createPhotoAvatar(account.photoURL)
+    : initialBadge(account.displayName.slice(0, 1) || "?");
+
+  const meta = document.createElement("div");
+  meta.className = "account-row__meta";
+  const name = document.createElement("strong");
+  name.textContent = account.displayName;
+  const email = document.createElement("span");
+  email.textContent = account.email; // own account only — safe, still textContent
+  meta.append(name, email);
+
+  row.append(avatar, meta);
+
+  const handleRow = document.createElement("div");
+  handleRow.className = "account-row__handle";
+  const handle = document.createElement("span");
+  handle.textContent = `@${account.username}`;
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "btn";
+  copy.textContent = "[ COPY ]";
+  copy.setAttribute("aria-label", "Copy your username");
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(account.username);
+      showToast({ message: "Username copied." });
+    } catch {
+      showToast({ message: "Copy failed", isError: true });
+    }
+  });
+  handleRow.append(handle, copy);
+
+  const signOut = document.createElement("button");
+  signOut.type = "button";
+  signOut.className = "btn btn--danger";
+  signOut.textContent = "[ SIGN OUT ]";
+  signOut.addEventListener("click", async () => {
+    signOut.disabled = true;
+    showToast({ message: "Signing out…" });
+    try {
+      await signOutAccount(); // reloads on success
+      signOut.disabled = false;
+      showToast({ message: "Sign-out failed", isError: true });
+    } catch (error) {
+      console.error("sign out failed", error);
+      signOut.disabled = false;
+      showToast({ message: "Sign-out failed", isError: true });
+    }
+  });
+
+  col.append(row, handleRow, signOut, settingsHint(
+    "Sign-out clears this browser's synced calendar cache.",
+  ));
+  return col;
+
+  /**
+   * @param {string} src @returns {HTMLImageElement}
+   */
+  function createPhotoAvatar(src) {
+    const img = document.createElement("img");
+    img.className = "account-row__avatar";
+    img.alt = "";
+    img.width = 40;
+    img.height = 40;
+    img.src = src;
+    img.referrerPolicy = "no-referrer";
+    return img;
+  }
+
+  /** @param {string} letter @returns {HTMLElement} */
+  function initialBadge(letter) {
+    const span = document.createElement("span");
+    span.className = "account-row__avatar account-row__avatar--initial";
+    span.textContent = letter.toUpperCase();
+    return span;
+  }
 }
 
 /** @param {string} title @param {() => HTMLElement} build */
