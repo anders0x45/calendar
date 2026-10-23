@@ -7,7 +7,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'chrono-shell-v9';
+const CACHE_NAME = 'chrono-shell-v10';
 
 const SHELL_ASSETS = [
   './',
@@ -49,6 +49,7 @@ const SHELL_ASSETS = [
   './js/firebase/firestore-api.js',
   './js/data/accounts.js',
   './js/data/migration.js',
+  './js/data/sharing.js',
   './js/firebase/config.js',
   './js/firebase/sdk.js',
   './js/firebase/auth.js',

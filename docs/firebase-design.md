@@ -237,6 +237,30 @@ LOCAL-ONLY clears by design, so the migration cleanup never touches
 cloud calendars; validation skips invalid rows (counted as skipped)
 and thrown errors abort before any deletion.
 
+## Sharing (F7)
+
+js/data/sharing.js + the settings SHARING card close the loop:
+
+- Invites: the active-calendar owner invites any @handle — top-level
+  `invites/{calId}__{inviteeUid}` with calendarName read live from the
+  calendar doc (rules verify both owner and live name). Self/duplicate/
+  unknown handles are refused client-side; permission-denied maps to
+  "not owner".
+- Inbox: invites where inviteeUid == me (the equality query the rules
+  allow, no extra index). ACCEPT runs the tested atomic batch —
+  calendar update adding exactly me as 'member' (profile username
+  verbatim, joinedAt = request.time) + invite delete — then points
+  users/{uid}.settings.activeCalendarId at the calendar and reloads
+  the shell (session boot resolves the new backend). DECLINE just
+  deletes the ticket.
+- Switcher: calendars I belong to via memberUids array-contains
+  (auto single-field index); switching updates the three-key settings
+  map (rules require the complete hill: weekStartsOn, lastView,
+  activeCalendarId) and reloads.
+- Leave: member-leave update drops my uid + entry. A member never
+  strands: leaving requires another owned calendar to switch to (the
+  onboarding claim always leaves the user owning "My calendar").
+
 ## Offline / errors
 
 - Everything except image generation works offline (cached events,
