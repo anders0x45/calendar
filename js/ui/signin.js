@@ -66,13 +66,24 @@ export function mountSignIn({ error = null, localOnly = false }, onOpen) {
     google.textContent = "[ CONTINUE WITH GOOGLE ]";
     google.addEventListener("click", () => {
       google.disabled = true;
-      beginGoogleSignIn().catch((reason) => {
-        // The redirect itself failed (config/domain); reset the button
-        // and surface it — the page is NOT navigating away.
-        console.error("sign-in redirect failed", reason);
-        google.disabled = false;
-        showError("Sign-in could not start — check connection.");
-      });
+      beginGoogleSignIn()
+        .then(() => {
+          // Popup resolved with the user signed in; the full boot
+          // (profile + calendarId) runs from the next page load.
+          google.textContent = "[ SIGNED IN — RELOADING… ]";
+          window.location.reload();
+        })
+        .catch((reason) => {
+          // Popup dismissed by the user is a normal cancel; everything
+          // else (redirect start, config, network) surfaces text.
+          if (/** @type {any} */ (reason)?.code === "auth/popup-closed-by-user") {
+            google.disabled = false;
+            return;
+          }
+          console.error("sign-in failed", reason);
+          google.disabled = false;
+          showError("Sign-in could not start — check connection.");
+        });
     });
     actions.append(google);
   }

@@ -6,6 +6,7 @@
 
 import {
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   onAuthStateChanged,
@@ -30,15 +31,26 @@ export function watchAuthUser(cb) {
 }
 
 /**
- * Kick off the Google sign-in redirect. Resolving means the browser is
- * leaving; errors (bad domain config, popup blocked…) come back and the
- * caller surfaces them on the sign-in screen.
- * @returns {Promise<void>}
+ * Kick off Google sign-in. Popup first (it keeps the result in this
+ * same document, which sidesteps the authDomain-iframe round-trip the
+ * redirect flow needs — the one that breaks under third-party storage
+ * partitioning on non-hosted origins); redirects only when popups are
+ * impossible (blocked or unsupported environment).
+ * @returns {Promise<void>} resolves with the user signed in (popup) or
+ *   stays pending while the browser navigates away (redirect fallback)
  */
 export function beginGoogleSignIn() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-  return signInWithRedirect(ensureAuth(), provider);
+  return signInWithPopup(ensureAuth(), provider).catch((/** @type {any} */ error) => {
+    if (
+      error?.code === "auth/popup-blocked" ||
+      error?.code === "auth/operation-not-supported-in-this-environment"
+    ) {
+      return signInWithRedirect(ensureAuth(), provider);
+    }
+    throw error;
+  });
 }
 
 /**
