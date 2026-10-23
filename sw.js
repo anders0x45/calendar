@@ -7,7 +7,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'chrono-shell-v8';
+const CACHE_NAME = 'chrono-shell-v9';
 
 const SHELL_ASSETS = [
   './',
@@ -48,6 +48,7 @@ const SHELL_ASSETS = [
   './js/lib/settingsSplit.js',
   './js/firebase/firestore-api.js',
   './js/data/accounts.js',
+  './js/data/migration.js',
   './js/firebase/config.js',
   './js/firebase/sdk.js',
   './js/firebase/auth.js',
@@ -68,6 +69,7 @@ const SHELL_ASSETS = [
   './js/ui/serviceWorker.js',
   './js/ui/signin.js',
   './js/ui/onboarding.js',
+  './js/ui/migrationSheet.js',
   // Firebase SDK (imported statically by js/firebase/*; precached so the
   // auth/firestore edges survive offline boots after first load).
   'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js',

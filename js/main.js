@@ -11,7 +11,7 @@ import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
 import { loadSettings, emptySettings, saveSettings, readCloudSettings, dropCloudSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
-import { setBackend } from "./data/backend.js";
+import { setBackend, getBackend } from "./data/backend.js";
 import { requestPersistentStorage } from "./data/db.js";
 import { initSession } from "./data/accounts.js";
 import { mountSignIn } from "./ui/signin.js";
@@ -19,6 +19,8 @@ import { mountOnboarding } from "./ui/onboarding.js";
 import { todayKey } from "./lib/dates.js";
 import { registerServiceWorker } from "./ui/serviceWorker.js";
 import { startLiveEvents } from "./ui/refresh.js";
+import { openMigrationSheet } from "./ui/migrationSheet.js";
+import { countLegacyEvents, wasMigrationOffered } from "./data/migration.js";
 
 /**
  * Entry point: resolve the account session first, then either run the
@@ -187,6 +189,27 @@ async function bootCalendar() {
   void startLiveEvents();
   initRouter();
   navigate(settings.lastView);
+
+  // One-time legacy import offer (cloud sessions with device-local
+  // events; the views already live above the sheet).
+  void offerMigration();
+}
+
+/**
+ * Show the migrate sheet once per device when legacy events exist on a
+ * cloud-backed session ("not now" keeps the offer for later sessions).
+ * @returns {Promise<void>}
+ */
+async function offerMigration() {
+  const backend = getBackend();
+  if (backend.mode !== "cloud" || !backend.uid) return;
+  try {
+    if (await wasMigrationOffered()) return;
+    const count = await countLegacyEvents();
+    if (count > 0) openMigrationSheet(count);
+  } catch (error) {
+    console.error("migration offer failed", error);
+  }
 }
 
 /** @returns {"month"|"week"|"day"} current view constrained to switchable ones */

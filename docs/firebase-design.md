@@ -221,6 +221,22 @@ the sync pill land with the sharing phase). The cloud image bytes move
 in the next phase; local image bytes keep working meanwhile because
 the millisecond-mapping keeps Event records identical either way.
 
+## One-time migration (F8)
+
+Legacy device-local events (pre-sign-in data) import into the active
+cloud calendar through js/data/migration.js + js/ui/
+migrationSheet.js: after a cloud boot, when IndexedDB still holds
+events and the offer has not run on this device, a sheet offers
+IMPORT (per-event cloud saves stamped createdBy = the importing uid,
+plus image bytes mirrored into the calendar's image collection) /
+NOT NOW
+(offer deferred; the one-time flag is a plain settings-store record
+"migration-offered-v1") / DISCARD LOCAL COPY (local events + images
+cleared without import). deleteAllEvents/deleteAllImages stay
+LOCAL-ONLY clears by design, so the migration cleanup never touches
+cloud calendars; validation skips invalid rows (counted as skipped)
+and thrown errors abort before any deletion.
+
 ## Offline / errors
 
 - Everything except image generation works offline (cached events,
