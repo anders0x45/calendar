@@ -45,12 +45,19 @@ export function firebaseConfigReady() {
 }
 
 /**
- * Emulator wiring is enabled when the app is served from localhost.
+ * Emulator wiring is opt-in: add ?emulators=1 to the URL (localhost or
+ * any origin) while running `firebase emulators:start`. The default is
+ * always the real project.
  * @param {string} [hostname] testing seam, defaults to location.hostname
+ * @param {string} [search]  testing seam, defaults to location.search
  * @returns {boolean}
  */
-export function usingEmulator(hostname = globalThis.location?.hostname) {
-  return hostname === "localhost" || hostname === "127.0.0.1";
+export function usingEmulator(
+  hostname = globalThis.location?.hostname,
+  search = globalThis.location?.search ?? "",
+) {
+  const local = hostname === "localhost" || hostname === "127.0.0.1";
+  return local && new URLSearchParams(search).has("emulators");
 }
 
 /**
