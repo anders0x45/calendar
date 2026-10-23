@@ -93,10 +93,14 @@ export async function initSession() {
   }
 
   const user = await new Promise((resolve) => {
+    const detach = { current: () => {} };
     const stop = watchAuthUser((u) => {
-      stop();
       resolve(u);
+      detach.current();
     });
+    // onAuthStateChanged may fire synchronously during registration;
+    // the indirection keeps the unsubscribe valid in either order.
+    detach.current = stop;
   });
   if (!user) {
     return { status: "signed-out", user: null };

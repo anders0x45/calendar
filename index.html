@@ -21,6 +21,46 @@
       });
     }
   </script>
+  <script>
+    // Boot watchdog: surfaces uncaught errors and connection stalls that
+    // would otherwise leave a blank screen. Removed by main.js once any
+    // screen (sign-in, onboarding, or calendar) has actually mounted.
+    (function () {
+      "use strict";
+      var log = [];
+      var node = null;
+      function render() {
+        if (!node) {
+          node = document.createElement("pre");
+          node.id = "boot-watchdog";
+          node.style.cssText =
+            "position:fixed;top:4px;left:50%;transform:translateX(-50%);" +
+            "max-width:92vw;max-height:38vh;overflow:auto;z-index:99999;" +
+            "background:#111;color:#0f0;font:11px/1.5 monospace;padding:6px 10px;" +
+            "white-space:pre-wrap;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,.4)";
+          (document.body || document.documentElement).appendChild(node);
+        }
+        node.textContent = "boot log\n--------\n" + log.slice(-14).join("\n");
+      }
+      window.__chronoBootLog = function (line) {
+        log.push(String(line).slice(0, 300));
+        if (!window.__chronoBooted) render();
+      };
+      window.addEventListener("error", function (e) {
+        window.__chronoBootLog(
+          "error: " + (e.message || "unknown") +
+          (e.filename ? " (" + String(e.filename).split("/").pop() + ":" + e.lineno + ")" : ""),
+        );
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        var r = e.reason;
+        window.__chronoBootLog("rejection: " + String((r && (r.code || r.message)) || r || "unknown"));
+      });
+      setTimeout(function () {
+        if (!window.__chronoBooted) window.__chronoBootLog("t+12s: boot has not mounted yet");
+      }, 12000);
+    })();
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#view-root">Skip navigation to calendar</a>

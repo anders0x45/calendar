@@ -26,7 +26,7 @@ import { ensureAuth, ensureFirestore, resetFirestoreInstance } from "./sdk.js";
  * @param {(user: import("https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js").User|null) => void} cb
  */
 export function watchAuthUser(cb) {
-  onAuthStateChanged(ensureAuth(), cb);
+  return onAuthStateChanged(ensureAuth(), cb);
 }
 
 /**

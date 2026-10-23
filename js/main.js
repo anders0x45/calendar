@@ -48,7 +48,8 @@ async function main() {
   const root = document.getElementById("view-root");
   if (!root) return;
 
-  const session = await initSession();
+  const session = await resolveSessionWithWatchdog();
+  markBooted();
   switch (session.status) {
     case "unconfigured":
       // Placeholder SDK credentials: still fully local, shown clearly.
@@ -111,6 +112,40 @@ async function main() {
   }
   dropCloudSettings();
   bootCalendar();
+}
+
+/**
+ * The unconfigured/local-only path mounts immediately; cloud paths all
+ * pass through markBooted() as soon as any screen exists, retiring the
+ * index.html boot watchdog.
+ * @returns {void}
+ */
+function markBooted() {
+  globalThis.__chronoBooted = true;
+  document.getElementById("boot-watchdog")?.remove();
+}
+
+const SESSION_TIMEOUT_MS = 15000;
+
+/**
+ * Never let the boot hang silently: if the auth state read stalls
+ * (network path blocked, captured service worker, dead endpoint), fall
+ * through to a sign-in screen with a retryable error.
+ * @returns {Promise<import("./data/accounts.js").Awaited<ReturnType<typeof initSession>>>}
+ */
+async function resolveSessionWithWatchdog() {
+  return Promise.race([
+    initSession(),
+    new Promise((resolve) => {
+      setTimeout(() => {
+        if (!globalThis.__chronoBooted) {
+          console.error("session resolve timed out; starting on the sign-in screen");
+          resolve({ status: "signed-out", error: "Connection is slow — check console and retry." });
+        }
+        // Late resolutions race-lose harmlessly.
+      }, SESSION_TIMEOUT_MS);
+    }),
+  ]);
 }
 
 /**
