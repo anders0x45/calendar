@@ -1,5 +1,12 @@
 {
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:rules": "firebase emulators:exec --project chrono-v2-placeholder --only firestore \"node --test tests/rules/*.test.js\""
+  },
   "devDependencies": {
-    "fake-indexeddb": "^6.2.6"
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "fake-indexeddb": "^6.2.6",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.34.0"
   }
 }

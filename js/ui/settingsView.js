@@ -7,8 +7,21 @@
 
 import { getState, setState, subscribe } from "../state.js";
 import { saveSettings, loadSettings } from "../data/settings.js";
+import { signOutAccount } from "../data/accounts.js";
 import { deleteAllEvents, saveEvent } from "../data/events.js";
 import { deleteAllImages, listImages, putImages } from "../data/images.js";
+import {
+  createInvite,
+  declineInvite,
+  acceptInvite,
+  getCalendarSummary,
+  listIncomingInvites,
+  listMyCalendars,
+  switchCalendar,
+  leaveCalendar,
+} from "../data/sharing.js";
+import { isCloud, getBackend } from "../data/backend.js";
+import { isUsernameValid } from "../lib/usernames.js";
 import { buildExport, decodeImages, exportFilename, parseImportPayload } from "../lib/backup.js";
 import { refreshEvents } from "./refresh.js";
 import { openSheet, renderSheetHead } from "./sheet.js";
@@ -30,18 +43,124 @@ export function mountSettingsView() {
   heading.append(h2, sub);
 
   const apiCard = sectionCard("// API_CONFIG //", apiSection);
+  const accountCard = sectionCard("// ACCOUNT //", accountSection);
   const prefCard = sectionCard("// PREFERENCES //", preferencesSection);
+  const sharingCard = isCloud() ? sectionCard("// SHARING //", sharingSection) : null;
   const artCard = sectionCard("// AUTO_ART //", artSection);
   const archiveCard = sectionCard("// ARCHIVE & PORTABILITY //", archiveSection);
   const dangerCard = sectionCard("// DANGER_ZONE //", dangerSection);
   apiCard.classList.add("raised-plate");
+  accountCard.classList.add("raised-plate");
   prefCard.classList.add("raised-plate");
+  sharingCard?.classList.add("raised-plate");
   artCard.classList.add("raised-plate");
   archiveCard.classList.add("raised-plate");
   dangerCard.classList.add("raised-plate");
 
-  root.append(heading, apiCard, prefCard, artCard, archiveCard, dangerCard, footer());
+  const cards = [heading, apiCard, accountCard, prefCard, sharingCard, artCard, archiveCard, dangerCard, footer()].filter(
+    (part) => part != null,
+  );
+  root.append(...cards);
   return root;
+}
+
+/**
+ * Signed-in identity: avatar, name, email, @username (copy) and sign
+ * out. Hidden entirely in local-device mode (no account configured).
+ */
+function accountSection() {
+  const account = getState().account;
+
+  const col = document.createElement("div");
+  col.className = "settings-col";
+  if (!account) {
+    const local = document.createElement("p");
+    local.className = "settings-hint";
+    local.textContent = "LOCAL DEVICE MODE // NO ACCOUNT CONNECTED";
+    col.append(local);
+    return col;
+  }
+
+  const row = document.createElement("div");
+  row.className = "account-row";
+
+  const avatar = account.photoURL
+    ? createPhotoAvatar(account.photoURL)
+    : initialBadge(account.displayName.slice(0, 1) || "?");
+
+  const meta = document.createElement("div");
+  meta.className = "account-row__meta";
+  const name = document.createElement("strong");
+  name.textContent = account.displayName;
+  const email = document.createElement("span");
+  email.textContent = account.email; // own account only — safe, still textContent
+  meta.append(name, email);
+
+  row.append(avatar, meta);
+
+  const handleRow = document.createElement("div");
+  handleRow.className = "account-row__handle";
+  const handle = document.createElement("span");
+  handle.textContent = `@${account.username}`;
+  const copy = document.createElement("button");
+  copy.type = "button";
+  copy.className = "btn";
+  copy.textContent = "[ COPY ]";
+  copy.setAttribute("aria-label", "Copy your username");
+  copy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(account.username);
+      showToast({ message: "Username copied." });
+    } catch {
+      showToast({ message: "Copy failed", isError: true });
+    }
+  });
+  handleRow.append(handle, copy);
+
+  const signOut = document.createElement("button");
+  signOut.type = "button";
+  signOut.className = "btn btn--danger";
+  signOut.textContent = "[ SIGN OUT ]";
+  signOut.addEventListener("click", async () => {
+    signOut.disabled = true;
+    showToast({ message: "Signing out…" });
+    try {
+      await signOutAccount(); // reloads on success
+      signOut.disabled = false;
+      showToast({ message: "Sign-out failed", isError: true });
+    } catch (error) {
+      console.error("sign out failed", error);
+      signOut.disabled = false;
+      showToast({ message: "Sign-out failed", isError: true });
+    }
+  });
+
+  col.append(row, handleRow, signOut, settingsHint(
+    "Sign-out clears this browser's synced calendar cache.",
+  ));
+  return col;
+
+  /**
+   * @param {string} src @returns {HTMLImageElement}
+   */
+  function createPhotoAvatar(src) {
+    const img = document.createElement("img");
+    img.className = "account-row__avatar";
+    img.alt = "";
+    img.width = 40;
+    img.height = 40;
+    img.src = src;
+    img.referrerPolicy = "no-referrer";
+    return img;
+  }
+
+  /** @param {string} letter @returns {HTMLElement} */
+  function initialBadge(letter) {
+    const span = document.createElement("span");
+    span.className = "account-row__avatar account-row__avatar--initial";
+    span.textContent = letter.toUpperCase();
+    return span;
+  }
 }
 
 /** @param {string} title @param {() => HTMLElement} build */
@@ -53,6 +172,248 @@ function sectionCard(title, build) {
   label.textContent = title;
   card.append(label, build());
   return card;
+}
+
+/**
+ * Sharing: invites by @username (owner), incoming invites with
+ * accept/decline, calendar switcher and leave. This section only
+ * exists under a cloud backend; async loads fill the card in place.
+ */
+function sharingSection() {
+  const col = document.createElement("div");
+  col.className = "settings-col";
+
+  const head = document.createElement("p");
+  head.className = "settings-hint";
+  head.setAttribute("aria-live", "polite");
+  head.textContent = "LOADING CALENDAR…";
+  col.append(head);
+
+  const inviteRow = document.createElement("div");
+  inviteRow.className = "settings-row";
+  const inviteInput = document.createElement("input");
+  inviteInput.type = "text";
+  inviteInput.className = "settings-key-input";
+  inviteInput.placeholder = "@handle";
+  inviteInput.autocomplete = "off";
+  inviteInput.spellcheck = false;
+  inviteInput.setAttribute("aria-label", "Invite a user by username");
+  const inviteBtn = document.createElement("button");
+  inviteBtn.type = "button";
+  inviteBtn.className = "btn";
+  inviteBtn.textContent = "[ INVITE ]";
+  inviteRow.append(inviteInput, inviteBtn);
+  inviteRow.hidden = true;
+
+  const parts = document.createElement("div");
+  parts.className = "settings-col";
+
+  inviteBtn.addEventListener("click", async () => {
+    const raw = inviteInput.value.trim().replace(/^@+/, "").toLowerCase();
+    if (!isUsernameValid(raw)) {
+      showToast({ message: "That handle is not valid", isError: true });
+      return;
+    }
+    inviteBtn.disabled = true;
+    const result = await createInvite(raw);
+    inviteBtn.disabled = false;
+    const messages = {
+      unknown: "No such handle.",
+      self: "That is your own handle.",
+      "not-owner": "Only the calendar owner can invite.",
+      taken: "They are already a member.",
+      failed: "Invite failed — try again.",
+    };
+    if (result.ok) {
+      inviteInput.value = "";
+      showToast({ message: `Invite sent to @${raw}.` });
+    } else {
+      showToast({
+        message: messages[result.reason] ?? "Invite failed",
+        isError: true,
+      });
+    }
+  });
+
+  void loadSharingState();
+
+  async function loadSharingState() {
+    const { calendarId, uid } = getBackend();
+    try {
+      const calendar = await getCalendarSummary(calendarId);
+      if (!calendar) {
+        head.textContent = "CALENDAR UNAVAILABLE";
+        head.classList.add("settings-hint--error");
+        return;
+      }
+      head.textContent =
+        `ACTIVE // ${calendar.name} · ${calendar.memberUids.length} MEMBER${calendar.memberUids.length === 1 ? "" : "S"}`;
+      inviteRow.hidden = calendar.ownerUid !== uid;
+      if (!inviteRow.hidden) col.insertBefore(inviteRow, parts);
+
+      const [myCalendars, inbox] = await Promise.all([
+        listMyCalendars(),
+        listIncomingInvites(),
+      ]);
+      parts.replaceChildren(
+        calendarList(myCalendars),
+        inboxList(inbox),
+        leaveRow(calendar),
+      );
+      col.append(parts);
+    } catch (error) {
+      console.error("sharing section load failed", error);
+      head.textContent = "SHARING DATA UNAVAILABLE";
+    }
+  }
+
+  /** @returns {HTMLElement} */
+  function calendarList(myCalendars) {
+    const label = document.createElement("span");
+    label.className = "form-label";
+    label.textContent = "MY CALENDARS";
+    const list = document.createElement("div");
+    list.className = "settings-col";
+    const current = getBackend().calendarId;
+    for (const candidate of myCalendars) {
+      const row = document.createElement("div");
+      row.className = "settings-row";
+      const name = document.createElement("span");
+      const owned = candidate.ownerUid === getBackend().uid;
+      name.textContent = `${candidate.id === current ? "▸ " : ""}${candidate.name}${owned ? " (owner)" : ""}`;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn";
+      btn.textContent = candidate.id === current ? "[ ACTIVE ]" : "[ SWITCH ]";
+      btn.disabled = candidate.id === current;
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        try {
+          await switchCalendar(candidate.id);
+          window.location.reload();
+        } catch (error) {
+          console.error("calendar switch failed", error);
+          btn.disabled = false;
+          showToast({ message: "Switch failed", isError: true });
+        }
+      });
+      row.append(name, btn);
+      list.append(row);
+    }
+    const wrap = document.createElement("div");
+    wrap.append(label, list);
+    return wrap;
+  }
+
+  /** @returns {HTMLElement} */
+  function inboxList(inbox) {
+    const label = document.createElement("span");
+    label.className = "form-label";
+    label.textContent = "INVITES";
+    const list = document.createElement("div");
+    list.className = "settings-col";
+    if (inbox.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "settings-hint";
+      empty.textContent = "No pending invites.";
+      list.append(empty);
+    }
+    for (const invite of inbox) {
+      const row = document.createElement("div");
+      row.className = "settings-row";
+      const name = document.createElement("span");
+      name.textContent = `${invite.calendarName} — via ${sliceName(invite.inviterName)}`;
+      const yes = document.createElement("button");
+      yes.type = "button";
+      yes.className = "btn btn--primary";
+      yes.textContent = "[ ACCEPT ]";
+      yes.addEventListener("click", async () => {
+        disable([yes, noButtons.get(invite.inviteId)]);
+        const result = await acceptInvite(invite);
+        if (result.ok) {
+          await switchCalendar(invite.calendarId);
+          window.location.reload();
+        } else {
+          enable([yes, noButtons.get(invite.inviteId)]);
+          showToast({
+            message: result.reason === "gone" ? "Invite expired." : "Accept failed",
+            isError: true,
+          });
+          void loadSharingState();
+        }
+      });
+      const no = document.createElement("button");
+      no.type = "button";
+      no.className = "btn";
+      no.textContent = "[ DECLINE ]";
+      no.addEventListener("click", async () => {
+        disable([yes, noButtons.get(invite.inviteId)]);
+        try {
+          await declineInvite(invite);
+          void loadSharingState();
+        } catch (error) {
+          console.error("invite decline failed", error);
+          enable([yes, noButtons.get(invite.inviteId)]);
+          showToast({ message: "Decline failed", isError: true });
+        }
+      });
+      const noButtons = new Map([[invite.inviteId, no]]);
+      row.append(name, yes, no);
+      list.append(row);
+    }
+    const wrap = document.createElement("div");
+    wrap.append(label, list);
+    return wrap;
+  }
+
+  /** @returns {HTMLElement|null} null when I own the active calendar */
+  function leaveRow(calendar) {
+    if (calendar.ownerUid === getBackend().uid) return null;
+    const label = document.createElement("span");
+    label.className = "form-label";
+    label.textContent = "MEMBERSHIP";
+    const leaveBtn = document.createElement("button");
+    leaveBtn.type = "button";
+    leaveBtn.className = "btn btn--danger";
+    leaveBtn.textContent = "[ LEAVE CALENDAR ]";
+    leaveBtn.addEventListener("click", async () => {
+      leaveBtn.disabled = true;
+      const mine = await listMyCalendars();
+      const next = mine.find((candidate) => candidate.id !== calendar.id && candidate.ownerUid === getBackend().uid);
+      if (!next) {
+        leaveBtn.disabled = false;
+        showToast({ message: "Keep at least one calendar you own.", isError: true });
+        return;
+      }
+      const result = await leaveCalendar(calendar.id);
+      if (result.ok) {
+        await switchCalendar(next.id);
+        window.location.reload();
+      } else {
+        leaveBtn.disabled = false;
+        showToast({ message: "Leave failed", isError: true });
+      }
+    });
+    const wrap = document.createElement("div");
+    wrap.append(label, leaveBtn);
+    return wrap;
+  }
+
+  col.append(parts);
+  return col;
+
+  /** @param {string} name */
+  function sliceName(name) {
+    return name.length > 18 ? `${name.slice(0, 17)}…` : name;
+  }
+  /** @param {(HTMLButtonElement|undefined|null)[]} buttons */
+  function disable(buttons) {
+    for (const button of buttons) if (button) button.disabled = true;
+  }
+  /** @param {(HTMLButtonElement|undefined|null)[]} buttons */
+  function enable(buttons) {
+    for (const button of buttons) if (button) button.disabled = false;
+  }
 }
 
 /** Art bridge endpoint + shared secret (revealable). */
@@ -250,7 +611,7 @@ function archiveSection() {
 async function runExport(exportBtn) {
   exportBtn.disabled = true;
   const { events } = getState();
-  const images = await listImages();
+  const images = await listImages(events.map((event) => event.id));
   const envelope = await buildExport({ events, images });
   const blob = new Blob([JSON.stringify(envelope)], { type: "application/json" });
   const url = URL.createObjectURL(blob);

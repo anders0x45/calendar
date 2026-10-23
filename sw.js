@@ -7,7 +7,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'chrono-shell-v5';
+const CACHE_NAME = 'chrono-shell-v13';
 
 const SHELL_ASSETS = [
   './',
@@ -37,10 +37,22 @@ const SHELL_ASSETS = [
   './js/lib/genai.js',
   './js/lib/imageQueue.js',
   './js/lib/backup.js',
+  './js/lib/usernames.js',
   './js/data/db.js',
   './js/data/events.js',
   './js/data/images.js',
   './js/data/settings.js',
+  './js/data/backend.js',
+  './js/data/cloudEvents.js',
+  './js/data/cloudImages.js',
+  './js/lib/settingsSplit.js',
+  './js/firebase/firestore-api.js',
+  './js/data/accounts.js',
+  './js/data/migration.js',
+  './js/data/sharing.js',
+  './js/firebase/config.js',
+  './js/firebase/sdk.js',
+  './js/firebase/auth.js',
   './js/ui/header.js',
   './js/ui/monthView.js',
   './js/ui/weekView.js',
@@ -56,6 +68,14 @@ const SHELL_ASSETS = [
   './js/ui/gestures.js',
   './js/ui/imageJobs.js',
   './js/ui/serviceWorker.js',
+  './js/ui/signin.js',
+  './js/ui/onboarding.js',
+  './js/ui/migrationSheet.js',
+  // Firebase SDK (imported statically by js/firebase/*; precached so the
+  // auth/firestore edges survive offline boots after first load).
+  'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js',
+  'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js',
+  'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js',
 ];
 
 self.addEventListener('install', (event) => {

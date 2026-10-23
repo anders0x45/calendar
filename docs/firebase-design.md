@@ -1,0 +1,277 @@
+# Firebase design (v2)
+
+The app keeps its vanilla-ES-modules, no-build architecture. Firestore
+replaces IndexedDB as the source of truth for events/images/calendars;
+Google sign-in replaces "implicit local user". All security lives in
+`firestore.rules` (default deny). The service worker still precaches the
+whole shell, now including the pinned Firebase SDK files, so the app
+opens offline on previously loaded data.
+
+## Runtime dependency
+
+Single allowed third-party runtime dependency:
+
+- Firebase JS SDK **12.19.0** (exact pin; released 2026-09-09, well over
+  the required two-week age). Loaded as pinned ES modules from
+  `https://www.gstatic.com/firebasejs/12.19.0/firebase-*.js`, wrapped
+  exclusively in `js/firebase/sdk.js` (no other module imports the SDK).
+  The service worker precaches these three files (`firebase-app.js`,
+  `firebase-auth.js`, `firebase-firestore.js`) — gstatic serves them
+  with `access-control-allow-origin: *` and 1-year immutable caching.
+- Dev-only: `firebase-tools` + `@firebase/rules-unit-testing` (npm
+  i-gnore; the app itself needs no install). The Firestore emulator
+  requires Java 11+ only when *running tests locally*.
+
+## Data model
+
+- `users/{uid}`
+  `{ displayName, email, photoURL, username, createdAt, settings }`
+  with `settings = { weekStartsOn: 0|1, lastView, activeCalendarId }`.
+  `email` is private (readable only by its owner). `username` is
+  set once and immutable afterwards.
+- `usernames/{username}` (doc id *is* the username)
+  `{ uid, displayName, photoURL, createdAt }`. Listing is denied; only
+  exact `get()` is allowed (availability check + invite lookup).
+- `calendars/{calendarId}`
+  `{ name (1-60), ownerUid, memberUids: [uid] (max 20, owner included),
+  members: { [uid]: { role: "owner"|"member", displayName, username,
+  photoURL, joinedAt } }, createdAt, updatedAt }`
+- `calendars/{calendarId}/events/{eventId}`
+  All existing event fields (title, color, date, time, timezone,
+  locationLink, recurrence {freq, interval, until, exceptions},
+  imageStatus) plus `createdBy`, `isRecurring` (always
+  `recurrence != null`), `imageUpdatedAt`, `createdAt`, `updatedAt`
+  (server timestamps). Client timestamps inside app state are mapped to
+  epoch ms.
+- `calendars/{calendarId}/images/{eventId}`
+  `{ bytes (Firestore Bytes, WebP, <=256 KB), mime: "image/webp",
+  width, height, createdBy, updatedAt }`
+- `invites/{calendarId}__{inviteeUid}` (doc id encodes the pair)
+  `{ calendarId, calendarName, inviteeUid, inviteeUsername,
+  inviterName, createdAt }` (the inviteeUid field backs invite-only
+  reads). Immutable (no updates); deleted on accept/decline/revoke.
+
+## Queries and indexes
+
+Per active calendar exactly two event listeners:
+
+1. `isRecurring == false` + `date` in `[visibleStart - 1, visibleEnd + 1]`
+   (+ one period of prefetch), ordered by `date`. The 1-day buffer
+   covers viewer-timezone day shifts of timed events.
+2. `isRecurring == true` (any date), recurrence filtered client-side by
+   `until` and expanded lazily for the visible range only.
+
+Composite index required: `events(isRecurring, date)` — see
+`firestore.indexes.json`. The images collection is never listened to;
+images are fetched lazily per rendered event (exact `get()`), cached
+in memory (Map -> object URL), URLs revoked when evicted.
+
+Invites inbox: one realtime listener per signed-in user on
+`invites` where `inviteeUid == uid` (single-field, automatic). The
+calendar list query `calendars where memberUids array-contains uid` is
+automatic too.
+
+Firestore persistent local cache (IndexedDB) is enabled with
+`localCache: persistentLocalCache({tabManager: persistentMultipleTabManager()})`,
+so reviewed data works offline and writes queue until reconnection. A
+small header pill shows offline/syncing state derived from snapshot
+`metadata.fromCache` + `hasPendingWrites`.
+
+## Rules summary (source of truth; the UI mirrors them)
+
+Helpers: `isSignedIn()`, `isMember(calId)`, `isOwner(calId)` via the
+calendar doc's `memberUids` + `ownerUid`.
+
+- **users**: each user reads/writes only their own doc. `username` can
+  be written exactly once, must match the `usernames/{name}` doc
+  claimed in the same batch (verified with `getAfter`), and only during
+  creation of that username claim. Other fields validated.
+- **usernames**: `get` for any signed-in user; `list` denied. Create
+  only if: id matches `^[a-z0-9_]{3,20}$`, `data.uid ==
+  request.auth.uid`, exact key set, not already a member of the batch
+  path, `getAfter` confirms `users/{uid}.username == doc id` (atomic
+  pair), and the caller has no username yet. Update: owner may change
+  `displayName`/`photoURL` only. Delete denied.
+- **calendars**: create = signed-in owner with `memberUids == [uid]`,
+  members map containing only self as "owner", valid name. Read =
+  member or owner (satisfies `array-contains` queries). Update:
+  (1) owner — may rename and manage members; `ownerUid` immutable, the
+  owner can never be removed from `memberUids`, `memberUids` stays
+  <= 20 (members-map uid counts must stay in sync with it; rules
+  cannot verify the exact CONTENT of other members' entries during a
+  leave, an accepted limitation since entries only carry display
+  data); (2) invitee accepting — requires the matching
+  `invites/{cal}__{caller}` doc to exist pre-batch and be consumed by
+  the same batch (`!existsAfter`) and the diff to touch only
+  `memberUids`/`members`/`updatedAt` while adding exactly the caller as
+  role "member" with their own stored username; (3) member leaving —
+  removes exactly their own uid and entry (never the owner's). Delete
+  = owner only. An invitee cannot READ the calendar before joining:
+  the invite card renders from the invite's own snapshot. In batched
+  writes `get()`/`exists()` see pre-batch state while `getAfter()`/
+  `existsAfter()` see post-batch state — nested-read permission checks
+  always evaluate pre-batch, so invitee-vs-owner branches avoid nesting
+  protected calendar reads where possible.
+- **events**: read = member. Create = member + `createdBy == uid` +
+  full field validation (title 1-80, color key from the 8 palette
+  colors in `js/config.js`, date `YYYY-MM-DD`, time `HH:mm` or null,
+  timezone shape-checked <=64 chars, locationLink null or http(s),
+  `isRecurring == (recurrence != null)`, recurrence interval 1-365,
+  imageStatus enum with pending/ready/failed requiring an
+  `imageRequestedAt` timestamp, timestamps are serverTimestamp).
+  Update/delete = creator or owner; `createdBy` immutable.
+- **images**: read = member (direct get only, no listing); write =
+  event creator only; `{ bytes (Firestore Bytes <= 256 KB), updatedAt
+  (serverTimestamp) }`. Delete = creator or owner.
+- **invites**: doc id must equal `calendarId + "__" + inviteeUid`;
+  create = calendar owner only + exact `usernames/{inviteeUsername}`
+  exists with matching uid + invitee not already a member + calendar
+  not full (20). Read/list = invitee (`inviteeUid == uid`) or calendar
+  owner. Delete = invitee or owner. No updates.
+
+## Auth flow
+
+Google provider only, `signInWithRedirect` (Option 1: `authDomain` of
+the serving domain — Firebase Hosting domain in production,
+`localhost` + emulator in dev) with `getRedirectResult()` on boot. A
+skeleton renders until auth resolves; a sign-in screen with a single
+"Continue with Google" button renders for signed-out users.
+
+First sign-in (or whenever the Firestore user doc lacks a username)
+forces a blocking onboarding screen: slugified suggestion from the
+Google displayName (never email), debounced exact `usernames/{name}`
+availability checks, live states (available / taken / invalid), an
+idempotent profile bootstrap (users/{uid} with username null), then an
+atomic claim: one batched write of `usernames/{name}` create +
+users/{uid} partial update (username + settings.activeCalendarId =
+the new default calendar id) + calendars/{id} "My calendar" create.
+The users write must be a partial UPDATE — a full set() re-sends
+createdAt with a fresh serverTimestamp sentinel, which the emulator
+rejects with evaluation errors instead of the intended outcome. If the
+batch fails with permission-denied (someone took the name between
+check and write) the UI shows "taken or invalid" and lets the user
+retry. Reserved words are rejected client-side (list in
+`js/config.js`).
+
+Account menu: avatar, name, (own) email, `@username` with copy button,
+sign out. Sign-out detaches every Firestore listener, terminates
+Firestore and clears its persistent cache, clears memory state, and
+returns to the sign-in screen so shared data never lingers.
+
+## Image pipeline (Firestore Bytes, no paid plan)
+
+Generator is still the user's own device-local Gemini/Cloudflare key
+(stored in IndexedDB, never exported, never in Firestore). Creator flow
+writes the event `imageStatus: "pending"` + `imageRequestedAt`, then
+generates, compresses to WebP stepping down 512/q0.8 -> 384/q0.6 until
+<= 256 KB, and writes in one batch `images/{eventId}` +
+`events/{eventId}.imageStatus = "ready"` (+ `imageUpdatedAt`). Failure
+-> `"failed"`. Shimmer for pending; `>= 5 min` pending decays to a
+failed/retry affordance locally. Remove/regenerate require the same
+permission as editing (creator or owner); regenerate prompts members
+without a local key to add one in Settings.
+
+## Sharing / invites
+
+Header calendar switcher sheet (list, active, create, rename/delete/
+leave via a calendar settings sheet) + invites badge. Share sheet:
+member list + pending invites (Revoke) + "Add person" by exact
+`@username` lookup with confirmation card — never list/search users.
+Accept = one batched write (calendar memberUids/members + delete
+invite), then "Open calendar".
+
+## Migration (one-time)
+
+After first successful sign-in, if the legacy IndexedDB `calendar` DB
+has events, offer a sheet: "Import N events from this device into My
+calendar?" (Import / Not now / Discard). Import writes in batches
+(<= 500), stamps `createdBy = uid`, then deletes the local copy after
+user-confirmed success. "Not now" keeps the prompt for next sign-in.
+The device-only settings store (Gemini bridge URL/secret etc.) is not
+migrated — it stays local by design.
+
+## Settings split (F4)
+
+loadSettings/saveSettings keep their signature. Device-local contents
+(art bridge URL/secret, imageModel, defaultDurationMin, militaryTime,
+autoArt) stay in the IndexedDB settings store exactly as before. The
+three prefs Allowed by the rules — weekStartsOn, lastView,
+activeCalendarId — overlay after the local merge: primed once at boot
+from users/{uid}.settings, and mirrored back on every save (exact
+three-key subset in the cloud map; anything invalid stays local-only
+rather than risking a denied write). Offline-safety comes free from
+the persistent cache, which queues the settings update until sync.
+The pure split helpers live in js/lib/settingsSplit.js (unit-tested);
+settings.js performs its Firestore work through dynamic imports so
+plain node tests never touch the gstatic SDK.
+
+## Backend switch (F3)
+
+`js/data/backend.js` holds the boot-resolved store mode: "local" (the
+IndexedDB stores; unconfigured or unfinished-auth boots) or "cloud"
+(UID + activeCalendarId after a completed onboarding). js/data/
+events.js keeps its exact function signatures and dispatches: pure
+logic stays local, CRUD goes to js/data/cloudEvents.js under cloud
+mode. cloudEvents converts at the boundary — doc ids are event ids,
+timestamps are serverTimestamp on create (immutable createdAt) and
+serverTimestamp again on update, imageStatus pending/ready/failed
+pairs with an imageRequestedAt timestamp (stamped at write time when
+unknown). Cloud events pull on every refresh call (onSnapshot live updates and
+the sync pill land with the sharing phase). The cloud image bytes move
+in the next phase; local image bytes keep working meanwhile because
+the millisecond-mapping keeps Event records identical either way.
+
+## One-time migration (F8)
+
+Legacy device-local events (pre-sign-in data) import into the active
+cloud calendar through js/data/migration.js + js/ui/
+migrationSheet.js: after a cloud boot, when IndexedDB still holds
+events and the offer has not run on this device, a sheet offers
+IMPORT (per-event cloud saves stamped createdBy = the importing uid,
+plus image bytes mirrored into the calendar's image collection) /
+NOT NOW
+(offer deferred; the one-time flag is a plain settings-store record
+"migration-offered-v1") / DISCARD LOCAL COPY (local events + images
+cleared without import). deleteAllEvents/deleteAllImages stay
+LOCAL-ONLY clears by design, so the migration cleanup never touches
+cloud calendars; validation skips invalid rows (counted as skipped)
+and thrown errors abort before any deletion.
+
+## Sharing (F7)
+
+js/data/sharing.js + the settings SHARING card close the loop:
+
+- Invites: the active-calendar owner invites any @handle — top-level
+  `invites/{calId}__{inviteeUid}` with calendarName read live from the
+  calendar doc (rules verify both owner and live name). Self/duplicate/
+  unknown handles are refused client-side; permission-denied maps to
+  "not owner".
+- Inbox: invites where inviteeUid == me (the equality query the rules
+  allow, no extra index). ACCEPT runs the tested atomic batch —
+  calendar update adding exactly me as 'member' (profile username
+  verbatim, joinedAt = request.time) + invite delete — then points
+  users/{uid}.settings.activeCalendarId at the calendar and reloads
+  the shell (session boot resolves the new backend). DECLINE just
+  deletes the ticket.
+- Switcher: calendars I belong to via memberUids array-contains
+  (auto single-field index); switching updates the three-key settings
+  map (rules require the complete hill: weekStartsOn, lastView,
+  activeCalendarId) and reloads.
+- Leave: member-leave update drops my uid + entry. A member never
+  strands: leaving requires another owned calendar to switch to (the
+  onboarding claim always leaves the user owning "My calendar").
+
+## Offline / errors
+
+- Everything except image generation works offline (cached events,
+  queued writes). The shell precache makes cold starts work too.
+- Write errors surface as toasts (`permission-denied` maps to a
+  friendly "not allowed" message; the UI hides controls the user
+  cannot use, and rules remain the backstop).
+- Undo delete keeps working: hide locally, commit delete after the
+  6-second toast, restore on undo.
+
+## App Check
+
+Optional hardening, not enforced in v1; documented in the README for a
+later milestone.

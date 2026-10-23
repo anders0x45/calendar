@@ -1,0 +1,424 @@
+rules_version = '2';
+
+// Chrono.exe security model (see docs/firebase-design.md):
+//   users/{uid}        profile + settings; username claimed once, atomically.
+//   usernames/{name}   lowercase-username registry; doc id IS the username.
+//   calendars/{calId}  shared lists; membership via memberUids + members map.
+//     /events/{id}     event docs; edits reserved to creator or owner.
+//     /images/{id}     generated WebP blobs (<= 256KB) for one event.
+//   invites/{calId}__{inviteeUid}  immutable "join this calendar" tickets.
+//
+// Event timestamps are serverTimestamp(); rules verify them against
+// request.time. Lists are bounded (members <= 20, exceptions <= 366,
+// recurrence interval 1..365) and field sets are closed via hasOnly(),
+// so clients cannot smuggle extra properties.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------- path + type helpers ---------- */
+
+    function userDoc(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function usernameDoc(name) {
+      return /databases/$(database)/documents/usernames/$(name);
+    }
+
+    function calendarDoc(calId) {
+      return /databases/$(database)/documents/calendars/$(calId);
+    }
+
+    function eventDoc(calId, eventId) {
+      return /databases/$(database)/documents/calendars/$(calId)/events/$(eventId);
+    }
+
+    function inviteDoc(calId, inviteeUid) {
+      return /databases/$(database)/documents/invites/$(calId + '__' + inviteeUid);
+    }
+
+    /** Top-level so sibling subcollection blocks can share them. */
+    function callerIsMemberOf(calId) {
+      return isSignedIn()
+        && callerUid() in get(calendarDoc(calId)).data.memberUids;
+    }
+
+    function callerIsOwnerOf(calId) {
+      return isSignedIn()
+        && get(calendarDoc(calId)).data.ownerUid == callerUid();
+    }
+
+    /* ---------- primitive validators ---------- */
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function callerUid() {
+      return request.auth.uid;
+    }
+
+    /** YYYY-MM-DD. Range/month-length checks happen client-side; rules
+     *  only pin the shape. */
+    function dateKeyOk(v) {
+      return v is string
+        && v.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+
+    function timeKeyOk(v) {
+      return v is string && v.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+    }
+
+    function usernameOk(v) {
+      return v is string && v.matches('^[a-z0-9_]{3,20}$');
+    }
+
+    function displayNameOk(v) {
+      return v is string && v.size() >= 1 && v.size() <= 60;
+    }
+
+    function photoUrlOk(v) {
+      return v == null || (v is string && v.size() <= 2048);
+    }
+
+    function paintedColorOk(v) {
+      return v in ['red', 'green', 'yellow', 'orange', 'teal', 'blue',
+        'purple', 'pink'];
+    }
+
+    function imageStatusOk(v) {
+      return v in ['none', 'pending', 'ready', 'failed', 'removed'];
+    }
+
+    /* ---------- users/{uid} ---------- */
+
+    match /users/{uid} {
+      function isMe() {
+        return isSignedIn() && callerUid() == uid;
+      }
+
+      function settingsOk(s) {
+        return s is map
+          && s.keys().hasOnly(['weekStartsOn', 'lastView', 'activeCalendarId'])
+          && s.weekStartsOn in [0, 1]
+          && s.lastView in ['month', 'week', 'day']
+          && (s.activeCalendarId == null
+              || (s.activeCalendarId is string
+                  && s.activeCalendarId.size() <= 128));
+      }
+
+      function profileFieldsOk(d) {
+        return d.keys()
+               .hasOnly(['displayName', 'email', 'photoURL', 'username',
+                 'createdAt', 'settings'])
+          && displayNameOk(d.displayName)
+          && d.email is string && d.email.size() <= 254
+          && photoUrlOk(d.photoURL)
+          && (d.username == null || usernameOk(d.username))
+          && settingsOk(d.settings);
+      }
+
+      // Get: self only. List: never (enumerating accounts is not a feature).
+      allow get: if isMe();
+      allow list: if false;
+
+      // Fresh sign-on snapshot: no username yet (claims happen afterwards).
+      allow create: if isMe()
+        && request.resource.data.username == null
+        && request.resource.data.createdAt == request.time
+        && profileFieldsOk(request.resource.data);
+
+      allow update: if isMe()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && profileFieldsOk(request.resource.data)
+        && (
+          // Ordinary profile / settings edits: username stays whatever it
+          // was (null until the one-time claim, claimed forever after).
+          request.resource.data.username == resource.data.username
+          // One-time claim: users/{uid}.username flips from unset to a name
+          // that the same batch registered under my uid (atomic pair).
+          || (resource.data.username == null
+            && request.resource.data.username != null
+            && usernameOk(request.resource.data.username)
+            && getAfter(usernameDoc(request.resource.data.username)).data.uid
+                 == callerUid())
+        );
+
+      allow delete: if false;
+    }
+
+    /* ---------- usernames/{name} ---------- */
+
+    match /usernames/{name} {
+      function usernameFieldsOk(d) {
+        return d.keys().hasOnly(['uid', 'displayName', 'photoURL', 'createdAt'])
+          && d.uid is string
+          && displayNameOk(d.displayName)
+          && photoUrlOk(d.photoURL);
+      }
+
+      // Lookups by any signed-in user (invite composer etc.). No listing.
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      // Immutable registry entry, created only together with the claim in
+      // users/{uid} (users.update branch checks getAfter here; this create
+      // checks the users doc had no username yet).
+      allow create: if isSignedIn()
+        && usernameOk(name)
+        && request.resource.data.uid == callerUid()
+        && request.resource.data.createdAt == request.time
+        && usernameFieldsOk(request.resource.data)
+        && get(userDoc(callerUid())).data.username == null;
+
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /* ---------- calendars/{calId} ---------- */
+
+    match /calendars/{calId} {
+      /** One member bookkeeping entry. joinedAt is always the write time
+       *  (entries only get written when the member joins). */
+      function memberFieldsOk(d) {
+        return d is map
+          && d.keys().hasOnly(['role', 'displayName', 'username', 'photoURL',
+            'joinedAt'])
+          && d.role in ['owner', 'member']
+          && usernameOk(d.username)
+          && displayNameOk(d.displayName)
+          && photoUrlOk(d.photoURL)
+          && d.joinedAt == request.time;
+      }
+
+      function calendarFieldsOk(d) {
+        return d.keys().hasOnly(['name', 'ownerUid', 'memberUids', 'members',
+          'createdAt', 'updatedAt'])
+          && d.name is string && d.name.size() >= 1 && d.name.size() <= 60
+          && d.ownerUid is string
+          && d.memberUids is list
+          && d.memberUids.size() >= 1 && d.memberUids.size() <= 20
+          && d.members is map;
+      }
+
+      /** memberUids and the members map record the same uid set. */
+      function uidSetSyncOk(d) {
+        return d.members.keys().size() == d.memberUids.size();
+      }
+
+      allow read: if isSignedIn() && callerUid() in resource.data.memberUids;
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == callerUid()
+        && calendarFieldsOk(request.resource.data)
+        && request.resource.data.memberUids == [callerUid()]
+        && request.resource.data.members.keys().hasOnly([callerUid()])
+        && memberFieldsOk(request.resource.data.members[callerUid()])
+        && request.resource.data.members[callerUid()].role == 'owner'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow update: if isSignedIn()
+        && calendarFieldsOk(request.resource.data)
+        && request.resource.data.updatedAt == request.time
+        && (
+          // Owner manages everything: memberships, kicks, renames. Members
+          // map edits keep uid counts in sync and my owner entry intact.
+          (resource.data.ownerUid == callerUid()
+            && request.resource.data.ownerUid == resource.data.ownerUid
+            && request.resource.data.createdAt == resource.data.createdAt
+            && uidSetSyncOk(request.resource.data)
+            && request.resource.data.members[callerUid()].role == 'owner')
+          // Invitee accepts: adds exactly themselves as 'member' and
+          // requires a live invite that this same batch consumes (exists()
+          // pre-batch, gone after the batch), which backs the atomic
+          // calendar+invite-delete commit.
+          || (exists(inviteDoc(calId, callerUid()))
+            && !existsAfter(inviteDoc(calId, callerUid()))
+            && !(callerUid() in resource.data.memberUids)
+            && request.resource.data.memberUids.size()
+                 == resource.data.memberUids.size() + 1
+            && request.resource.data.memberUids.toSet()
+                 .hasAll(resource.data.memberUids)
+            && request.resource.data.memberUids.toSet()
+                 .difference(resource.data.memberUids.toSet())
+                 == [callerUid()].toSet()
+            && request.resource.data.members.keys()
+                 .hasAll(resource.data.members.keys())
+            && request.resource.data.members.keys().toSet()
+                 .hasOnly(resource.data.members.keys().toSet()
+                   .union([callerUid()].toSet()))
+            && request.resource.data.members[callerUid()].role == 'member'
+            && request.resource.data.members[callerUid()].username
+                 == get(userDoc(callerUid())).data.username
+            && memberFieldsOk(request.resource.data.members[callerUid()])
+            && request.resource.data.ownerUid == resource.data.ownerUid
+            && request.resource.data.createdAt == resource.data.createdAt)
+          // Member leaves: removes exactly their own uid and their entry.
+          || (callerUid() in resource.data.memberUids
+            && resource.data.ownerUid != callerUid()
+            && resource.data.memberUids.toSet()
+                 .difference([callerUid()].toSet())
+                 == request.resource.data.memberUids.toSet()
+            && request.resource.data.members.keys().size()
+                 == request.resource.data.memberUids.size()
+            && request.resource.data.members.keys().toSet()
+                 .hasOnly(resource.data.members.keys().toSet()))
+        );
+
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == callerUid();
+
+      /* ---------- calendars/{calId}/events/{eventId} ---------- */
+
+      match /events/{eventId} {
+        function recurrenceOk(r) {
+          return r is map
+            && r.keys().hasOnly(['freq', 'interval', 'until', 'exceptions'])
+            && r.freq in ['daily', 'weekly', 'monthly', 'yearly']
+            && r.interval is int && r.interval >= 1 && r.interval <= 365
+            && (r.get('until', null) == null || dateKeyOk(r.until))
+            && (r.get('exceptions', null) == null
+              || (r.exceptions is list && r.exceptions.size() <= 366));
+        }
+
+        function eventDataOk(d) {
+          return d.keys()
+                  .hasOnly(['title', 'color', 'date', 'time', 'timezone',
+                    'locationLink', 'recurrence', 'imageStatus',
+                    'imageRequestedAt', 'imageUpdatedAt', 'createdBy',
+                    'isRecurring', 'createdAt', 'updatedAt'])
+            && d.title is string
+            && d.title.size() >= 1 && d.title.size() <= 80
+            && paintedColorOk(d.color)
+            && dateKeyOk(d.date)
+            && (d.time == null || timeKeyOk(d.time))
+            && (d.timezone == null
+              || (d.timezone is string
+                && d.timezone.size() <= 64
+                && d.timezone.matches(
+                   '^[A-Za-z][A-Za-z0-9_/+.-]*(/[A-Za-z0-9_/+.-]+)*$')))
+            && (d.locationLink == null
+              || (d.locationLink is string
+                  && d.locationLink.matches('^https?://.+$')))
+            && imageStatusOk(d.imageStatus)
+            && ((d.imageStatus == 'pending'
+                 || d.imageStatus == 'ready'
+                 || d.imageStatus == 'failed')
+              == (d.imageRequestedAt is timestamp))
+            && (d.imageUpdatedAt == null || d.imageUpdatedAt is timestamp)
+            && d.createdBy is string
+            && d.isRecurring is bool
+            && d.isRecurring == (d.recurrence != null)
+            && (d.recurrence == null || recurrenceOk(d.recurrence));
+        }
+
+        // Two live listeners per calendar (non-recurring window + all
+        // recurring), both range-constrained; rules budget is one get.
+        allow read: if callerIsMemberOf(calId);
+
+        allow create: if callerIsMemberOf(calId)
+          && request.resource.data.createdBy == callerUid()
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && eventDataOk(request.resource.data);
+
+        // Creator or calendar owner. Immutable: createdBy, createdAt.
+        // updatedAt must move on every edit.
+        allow update: if (callerIsMemberOf(calId)
+            && (resource.data.createdBy == callerUid()
+              || callerIsOwnerOf(calId)))
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.updatedAt == request.time
+          && eventDataOk(request.resource.data);
+
+        allow delete: if callerIsMemberOf(calId)
+          && (resource.data.createdBy == callerUid()
+            || callerIsOwnerOf(calId));
+      }
+
+      /* ---------- calendars/{calId}/images/{eventId} ---------- */
+
+      match /images/{eventId} {
+        /** WebP blobs are compressed client-side to stay under Firestore's
+         *  1MiB doc cap with headroom; 256KB is the app's self-imposed cap. */
+        function imageDataOk(d) {
+          return d.keys().hasOnly(['bytes', 'updatedAt'])
+            && d.bytes is bytes
+            && d.bytes.size() > 0
+            && d.bytes.size() <= 256 * 1024
+            && d.updatedAt == request.time;
+        }
+
+        function requesterIsCaller() {
+          return isSignedIn()
+            && get(eventDoc(calId, eventId)).data.createdBy == callerUid();
+        }
+
+        allow get: if callerIsMemberOf(calId);
+        allow list: if false;
+
+        // Only the event creator uploads its generated art; every image
+        // write must carry a fresh server timestamp and the size cap above.
+        allow create: if requesterIsCaller()
+          && imageDataOk(request.resource.data);
+
+        allow update: if requesterIsCaller()
+          && imageDataOk(request.resource.data);
+
+        allow delete: if callerIsMemberOf(calId)
+          && (requesterIsCaller() || callerIsOwnerOf(calId));
+      }
+    }
+
+    /* ---------- invites/{calId}__{inviteeUid} ---------- */
+
+    match /invites/{inviteId} {
+      function inviteFieldsOk(d) {
+        return d.keys().hasOnly(['calendarId', 'calendarName', 'inviteeUid',
+          'inviteeUsername', 'inviterName', 'createdAt'])
+          && d.calendarId is string
+          && d.calendarId.size() >= 1 && d.calendarId.size() <= 128
+          && d.calendarName is string
+          && d.calendarName.size() >= 1 && d.calendarName.size() <= 60
+          && d.inviteeUid is string
+          && usernameOk(d.inviteeUsername)
+          && displayNameOk(d.inviterName)
+          && d.createdAt == request.time;
+      }
+
+      // Invitees read their inbox via inviteeUid == me; owners revoke by
+      // documented id without reading. Listing everyone's invites: no.
+      allow read: if isSignedIn()
+        && resource.data.inviteeUid == callerUid();
+
+      // Owner of the target calendar invites a real username they do not
+      // hold themselves. calendarName must match the live calendar.
+      allow create: if isSignedIn()
+        && inviteFieldsOk(request.resource.data)
+        && request.resource.data.inviteeUid != callerUid()
+        && get(calendarDoc(request.resource.data.calendarId)).data.ownerUid
+             == callerUid()
+        && get(calendarDoc(request.resource.data.calendarId)).data.name
+             == request.resource.data.calendarName
+        && get(usernameDoc(request.resource.data.inviteeUsername)).data.uid
+             == request.resource.data.inviteeUid;
+
+      // Invitee (accept accepted invite / decline: theirOWn cleanup) or
+      // target-calendar owner (revoke). The invitee branch does not check
+      // the calendar at all — inside batched writes, nested-read
+      // permission evaluation sees PRE-batch state, and the accept batch
+      // adds the invitee to the calendar in the same write. The calendar
+      // update's accept branch still requires the live invite (exists()),
+      // so an uninvited user deleting a ticket gains nothing.
+      allow delete: if isSignedIn()
+        && (resource.data.inviteeUid == callerUid()
+          || get(calendarDoc(resource.data.calendarId)).data.ownerUid
+               == callerUid());
+
+      allow update: if false;
+    }
+  }
+}

@@ -9,16 +9,23 @@ import { startImageJobs } from "./ui/imageJobs.js";
 import { openPickerSheet } from "./ui/picker.js";
 import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
-import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
+import { loadSettings, emptySettings, saveSettings, readCloudSettings, dropCloudSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
+import { setBackend, getBackend } from "./data/backend.js";
 import { requestPersistentStorage } from "./data/db.js";
+import { initSession } from "./data/accounts.js";
+import { mountSignIn } from "./ui/signin.js";
+import { mountOnboarding } from "./ui/onboarding.js";
 import { todayKey } from "./lib/dates.js";
 import { registerServiceWorker } from "./ui/serviceWorker.js";
+import { startLiveEvents } from "./ui/refresh.js";
+import { openMigrationSheet } from "./ui/migrationSheet.js";
+import { countLegacyEvents, wasMigrationOffered } from "./data/migration.js";
 
 /**
- * Entry point: boot storage, mount shared chrome and the last-used view.
- * Milestone 4 ships the month view; week/day render until-then
- * placeholders (replaced in milestone 6).
+ * Entry point: resolve the account session first, then either run the
+ * auth screens (sign-in / blocking username onboarding) or boot storage
+ * and mount shared chrome plus the last-used view.
  */
 
 /** @type {HTMLElement|null} */
@@ -37,6 +44,129 @@ let settingsViewEl = null;
 async function main() {
   requestPersistentStorage();
   registerServiceWorker();
+
+  const root = document.getElementById("view-root");
+  if (!root) return;
+
+  const session = await resolveSessionWithWatchdog();
+  markBooted();
+  switch (session.status) {
+    case "unconfigured":
+      // Placeholder SDK credentials: still fully local, shown clearly.
+      showAuthChrome();
+      root.replaceChildren(
+        mountSignIn({ localOnly: true }, () => {
+          hideAuthChrome();
+          bootCalendar();
+        }),
+      );
+      return;
+    case "signed-out":
+      showAuthChrome();
+      root.replaceChildren(
+        mountSignIn({ error: session.error ?? null }, () => {}),
+      );
+      return;
+    case "onboarding":
+      showAuthChrome();
+      root.replaceChildren(
+        mountOnboarding(session.user, (account) => {
+          setState({ account });
+          hideAuthChrome();
+          bootCalendar();
+        }),
+      );
+      return;
+    default:
+      break;
+  }
+
+  if (session.status === "ready") {
+    setState({ account: session.account });
+  }
+
+  // The events store may be cloud-backed when signed in with a claimed
+  // calendar; it stays local-only otherwise. Both paths share this boot.
+  const account = getState().account;
+  if (account) {
+    const cloud = await readCloudSettings(account.uid).catch((error) => {
+      console.error("boot: cloud settings unavailable", error);
+      return null;
+    });
+    if (typeof cloud?.activeCalendarId === "string") {
+      // Cloud-backed events for the claimed default calendar.
+      setBackend({ mode: "cloud", uid: account.uid, calendarId: cloud.activeCalendarId });
+      bootCalendar();
+      return;
+    }
+    // Signed in but the claim batch never completed (tab closed mid-
+    // onboarding): re-enter the blocking onboarding with stored profile.
+    showAuthChrome();
+    root.replaceChildren(
+      mountOnboarding(account, () => {
+        hideAuthChrome();
+        main().catch((error) => console.error("re-entry boot failed", error));
+      }),
+    );
+    return;
+  }
+  dropCloudSettings();
+  bootCalendar();
+}
+
+/**
+ * The unconfigured/local-only path mounts immediately; cloud paths all
+ * pass through markBooted() as soon as any screen exists, retiring the
+ * index.html boot watchdog.
+ * @returns {void}
+ */
+function markBooted() {
+  globalThis.__chronoBooted = true;
+  document.getElementById("boot-watchdog")?.remove();
+}
+
+const SESSION_TIMEOUT_MS = 15000;
+
+/**
+ * Never let the boot hang silently: if the auth state read stalls
+ * (network path blocked, captured service worker, dead endpoint), fall
+ * through to a sign-in screen with a retryable error.
+ * @returns {Promise<import("./data/accounts.js").Awaited<ReturnType<typeof initSession>>>}
+ */
+async function resolveSessionWithWatchdog() {
+  return Promise.race([
+    initSession(),
+    new Promise((resolve) => {
+      setTimeout(() => {
+        if (!globalThis.__chronoBooted) {
+          console.error("session resolve timed out; starting on the sign-in screen");
+          resolve({ status: "signed-out", error: "Connection is slow — check console and retry." });
+        }
+        // Late resolutions race-lose harmlessly.
+      }, SESSION_TIMEOUT_MS);
+    }),
+  ]);
+}
+
+/**
+ * Swap the header action area for the sign-in affordance and hide
+ * calendar chrome while an auth screen owns the viewport.
+ */
+function showAuthChrome() {
+  document.body.classList.add("is-auth");
+  const fab = document.getElementById("btn-fab");
+  if (fab) fab.hidden = true;
+}
+
+/** Restore the normal calendar chrome after auth resolves. */
+function hideAuthChrome() {
+  document.body.classList.remove("is-auth");
+  const fab = document.getElementById("btn-fab");
+  if (fab) fab.hidden = false;
+}
+
+/** The classic boot: storage load, deck, views, router. */
+async function bootCalendar() {
 
   const root = document.getElementById("view-root");
   const fab = document.getElementById("btn-fab");
@@ -89,8 +219,32 @@ async function main() {
   onAfterSwitch(rememberLastView);
 
   startImageJobs();
+  // Cloud mode additionally streams in live event changes (the pull
+  // path stays as the local/offline fallback).
+  void startLiveEvents();
   initRouter();
   navigate(settings.lastView);
+
+  // One-time legacy import offer (cloud sessions with device-local
+  // events; the views already live above the sheet).
+  void offerMigration();
+}
+
+/**
+ * Show the migrate sheet once per device when legacy events exist on a
+ * cloud-backed session ("not now" keeps the offer for later sessions).
+ * @returns {Promise<void>}
+ */
+async function offerMigration() {
+  const backend = getBackend();
+  if (backend.mode !== "cloud" || !backend.uid) return;
+  try {
+    if (await wasMigrationOffered()) return;
+    const count = await countLegacyEvents();
+    if (count > 0) openMigrationSheet(count);
+  } catch (error) {
+    console.error("migration offer failed", error);
+  }
 }
 
 /** @returns {"month"|"week"|"day"} current view constrained to switchable ones */
