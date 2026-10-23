@@ -190,6 +190,21 @@ user-confirmed success. "Not now" keeps the prompt for next sign-in.
 The device-only settings store (Gemini bridge URL/secret etc.) is not
 migrated — it stays local by design.
 
+## Settings split (F4)
+
+loadSettings/saveSettings keep their signature. Device-local contents
+(art bridge URL/secret, imageModel, defaultDurationMin, militaryTime,
+autoArt) stay in the IndexedDB settings store exactly as before. The
+three prefs Allowed by the rules — weekStartsOn, lastView,
+activeCalendarId — overlay after the local merge: primed once at boot
+from users/{uid}.settings, and mirrored back on every save (exact
+three-key subset in the cloud map; anything invalid stays local-only
+rather than risking a denied write). Offline-safety comes free from
+the persistent cache, which queues the settings update until sync.
+The pure split helpers live in js/lib/settingsSplit.js (unit-tested);
+settings.js performs its Firestore work through dynamic imports so
+plain node tests never touch the gstatic SDK.
+
 ## Backend switch (F3)
 
 `js/data/backend.js` holds the boot-resolved store mode: "local" (the

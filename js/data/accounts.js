@@ -268,24 +268,6 @@ export async function completeOnboarding(user, username) {
 }
 
 /**
- * Active calendar pointer from the user doc (set during onboarding).
- * @param {string} uid
- * @returns {Promise<string|null>}
- */
-export async function readActiveCalendarId(uid) {
-  let snapshot;
-  try {
-    snapshot = await getDoc(doc(ensureFirestore(), USERS, uid));
-  } catch {
-    return null;
-  }
-  const data = snapshot.data();
-  return typeof data?.settings?.activeCalendarId === "string"
-    ? data.settings.activeCalendarId
-    : null;
-}
-
-/**
  * Sign out: detach Firestore, wipe its persisted cache, and reload back
  * to the sign-in screen so no shared data lingers in the interface.
  * @returns {Promise<void>}

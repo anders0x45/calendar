@@ -9,10 +9,9 @@ import { startImageJobs } from "./ui/imageJobs.js";
 import { openPickerSheet } from "./ui/picker.js";
 import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
-import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
+import { loadSettings, emptySettings, saveSettings, readCloudSettings, dropCloudSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
 import { setBackend } from "./data/backend.js";
-import { readActiveCalendarId } from "./data/accounts.js";
 import { requestPersistentStorage } from "./data/db.js";
 import { initSession } from "./data/accounts.js";
 import { mountSignIn } from "./ui/signin.js";
@@ -86,10 +85,13 @@ async function main() {
   // calendar; it stays local-only otherwise. Both paths share this boot.
   const account = getState().account;
   if (account) {
-    const calendarId = await readActiveCalendarId(account.uid).catch(() => null);
-    if (calendarId) {
+    const cloud = await readCloudSettings(account.uid).catch((error) => {
+      console.error("boot: cloud settings unavailable", error);
+      return null;
+    });
+    if (typeof cloud?.activeCalendarId === "string") {
       // Cloud-backed events for the claimed default calendar.
-      setBackend({ mode: "cloud", uid: account.uid, calendarId });
+      setBackend({ mode: "cloud", uid: account.uid, calendarId: cloud.activeCalendarId });
       bootCalendar();
       return;
     }
@@ -104,6 +106,7 @@ async function main() {
     );
     return;
   }
+  dropCloudSettings();
   bootCalendar();
 }
 
