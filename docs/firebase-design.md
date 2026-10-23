@@ -190,6 +190,22 @@ user-confirmed success. "Not now" keeps the prompt for next sign-in.
 The device-only settings store (Gemini bridge URL/secret etc.) is not
 migrated — it stays local by design.
 
+## Backend switch (F3)
+
+`js/data/backend.js` holds the boot-resolved store mode: "local" (the
+IndexedDB stores; unconfigured or unfinished-auth boots) or "cloud"
+(UID + activeCalendarId after a completed onboarding). js/data/
+events.js keeps its exact function signatures and dispatches: pure
+logic stays local, CRUD goes to js/data/cloudEvents.js under cloud
+mode. cloudEvents converts at the boundary — doc ids are event ids,
+timestamps are serverTimestamp on create (immutable createdAt) and
+serverTimestamp again on update, imageStatus pending/ready/failed
+pairs with an imageRequestedAt timestamp (stamped at write time when
+unknown). Cloud events pull on every refresh call (onSnapshot live updates and
+the sync pill land with the sharing phase). The cloud image bytes move
+in the next phase; local image bytes keep working meanwhile because
+the millisecond-mapping keeps Event records identical either way.
+
 ## Offline / errors
 
 - Everything except image generation works offline (cached events,

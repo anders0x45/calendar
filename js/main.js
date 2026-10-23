@@ -11,6 +11,8 @@ import { attachSwipe } from "./ui/gestures.js";
 import { openEventForm } from "./ui/eventSheet.js";
 import { loadSettings, emptySettings, saveSettings } from "./data/settings.js";
 import { listEvents } from "./data/events.js";
+import { setBackend } from "./data/backend.js";
+import { readActiveCalendarId } from "./data/accounts.js";
 import { requestPersistentStorage } from "./data/db.js";
 import { initSession } from "./data/accounts.js";
 import { mountSignIn } from "./ui/signin.js";
@@ -78,6 +80,29 @@ async function main() {
 
   if (session.status === "ready") {
     setState({ account: session.account });
+  }
+
+  // The events store may be cloud-backed when signed in with a claimed
+  // calendar; it stays local-only otherwise. Both paths share this boot.
+  const account = getState().account;
+  if (account) {
+    const calendarId = await readActiveCalendarId(account.uid).catch(() => null);
+    if (calendarId) {
+      // Cloud-backed events for the claimed default calendar.
+      setBackend({ mode: "cloud", uid: account.uid, calendarId });
+      bootCalendar();
+      return;
+    }
+    // Signed in but the claim batch never completed (tab closed mid-
+    // onboarding): re-enter the blocking onboarding with stored profile.
+    showAuthChrome();
+    root.replaceChildren(
+      mountOnboarding(account, () => {
+        hideAuthChrome();
+        main().catch((error) => console.error("re-entry boot failed", error));
+      }),
+    );
+    return;
   }
   bootCalendar();
 }

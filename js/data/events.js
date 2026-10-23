@@ -1,9 +1,13 @@
 /**
- * Event CRUD against the events store. UI never touches IndexedDB
- * directly — everything goes through these functions.
+ * Event CRUD against the backend. UI never touches IndexedDB or
+ * Firestore directly — everything goes through these functions. Pure
+ * helpers (validation, ranges, drafts) are always local; the CRUD
+ * surface dispatches to IndexedDB or Firestore depending on the boot
+ * backend switch (js/data/backend.js).
  */
 
 import { withTransaction } from "./db.js";
+import { getBackend, isCloud } from "./backend.js";
 import { EVENT_COLORS, DELETION_MODES } from "../config.js";
 import { addDays, parseDate } from "../lib/dates.js";
 import { instantToDateKey, zonedWallToInstant } from "../lib/timezones.js";
@@ -14,6 +18,7 @@ import { uuidV4 } from "../lib/uuid.js";
 /** @typedef {{id: string, title: string, color: string, date: string,
  *   time: string|null, timezone: string, locationLink: string|null,
  *   imageStatus: "none"|"pending"|"ready"|"failed"|"removed",
+ *   imageRequestedAt?: number|null,
  *   recurrence: import("../lib/recurrence.js").Recurrence|null,
  *   createdAt: number, updatedAt: number}} Event */
 
@@ -68,6 +73,19 @@ export function validateEventRecord(value) {
   if (typeof e.updatedAt !== "number" || !Number.isFinite(e.updatedAt)) {
     return { ok: false, reason: "invalid updatedAt" };
   }
+  if (e.imageRequestedAt != null &&
+    (typeof e.imageRequestedAt !== "number" || !Number.isFinite(e.imageRequestedAt))) {
+    return { ok: false, reason: "invalid imageRequestedAt" };
+  }
+  // Cloud-shape guard: rules cap recurrence interval at 365 and the
+  // exceptions list at 366; catch it before a rejected write.
+  if (e.recurrence) {
+    const r = /** @type {Record<string, unknown>} */ (e.recurrence);
+    if (Number(r.interval) > 365) return { ok: false, reason: "invalid recurrence interval" };
+    if (Array.isArray(r.exceptions) && r.exceptions.length > 366) {
+      return { ok: false, reason: "invalid recurrence exceptions" };
+    }
+  }
   return { ok: true, event: normalizeEvent(e) };
 }
 
@@ -86,6 +104,7 @@ function normalizeEvent(e) {
     timezone: e.timezone ?? null,
     locationLink: e.locationLink ?? null,
     imageStatus: e.imageStatus ?? "none",
+    imageRequestedAt: e.imageRequestedAt ?? null,
     recurrence: e.recurrence ?? null,
     createdAt: e.createdAt ?? Date.now(),
     updatedAt: e.updatedAt ?? Date.now(),
@@ -97,6 +116,10 @@ function normalizeEvent(e) {
  * @returns {Promise<Event[]>}
  */
 export async function listEvents() {
+  if (isCloud()) {
+    const cloud = await import("./cloudEvents.js");
+    return cloud.listEvents();
+  }
   const rows = await withTransaction(["events"], "readonly", (stores) =>
     stores.events.getAll(),
   );
@@ -108,6 +131,10 @@ export async function listEvents() {
  * @returns {Promise<Event | null>}
  */
 export async function getEvent(id) {
+  if (isCloud()) {
+    const cloud = await import("./cloudEvents.js");
+    return cloud.getEvent(id);
+  }
   const row = await withTransaction(["events"], "readonly", (stores) => stores.events.get(id));
   if (!row) return null;
   const check = validateEventRecord(row);
@@ -123,6 +150,10 @@ export async function saveEvent(event) {
   const schema = { ...event, createdAt: event.createdAt ?? Date.now(), updatedAt: Date.now() };
   const check = validateEventRecord(schema);
   if (!check.ok) throw new TypeError(`cannot save event: ${check.reason}`);
+  if (isCloud()) {
+    const cloud = await import("./cloudEvents.js");
+    return cloud.saveEvent(check.event);
+  }
   await withTransaction(["events"], "readwrite", (stores) => stores.events.put(check.event));
   return check.event;
 }
@@ -157,6 +188,10 @@ export function makeEvent(draft) {
  * @returns {Promise<void>}
  */
 export async function deleteEvent(id) {
+  if (isCloud()) {
+    const cloud = await import("./cloudEvents.js");
+    return cloud.deleteEvent(id);
+  }
   await withTransaction(["events"], "readwrite", (stores) => {
     stores.events.delete(id);
   });
@@ -235,11 +270,14 @@ function placeDate(event, date, viewerZone) {
  * @returns {Promise<number>}
  */
 export async function countEvents() {
-  return withTransaction(["events"], "readonly", (stores) => stores.events.count());
+  const events = await listEvents();
+  return events.length;
 }
 
 /**
- * Remove every event record (factory reset; call with deleteAllImages).
+ * Remove every LOCAL event record (factory reset affordance for the
+ * device's own stores; cloud calendars are never wiped in bulk here —
+ * per-event cloud deletion stays a creator/owner action).
  * @returns {Promise<void>}
  */
 export async function deleteAllEvents() {

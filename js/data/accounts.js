@@ -25,8 +25,7 @@ import {
   setDoc,
   writeBatch,
   serverTimestamp,
-} from
-  "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+} from "../firebase/firestore-api.js";
 import { ensureFirestore } from "../firebase/sdk.js";
 import { isUsernameValid, usernameIssue } from "../lib/usernames.js";
 import { defaultWeekStartsOn } from "./settings.js";
@@ -266,6 +265,24 @@ export async function completeOnboarding(user, username) {
     console.error("onboarding write failed", error);
     return { ok: false, reason: "failed" };
   }
+}
+
+/**
+ * Active calendar pointer from the user doc (set during onboarding).
+ * @param {string} uid
+ * @returns {Promise<string|null>}
+ */
+export async function readActiveCalendarId(uid) {
+  let snapshot;
+  try {
+    snapshot = await getDoc(doc(ensureFirestore(), USERS, uid));
+  } catch {
+    return null;
+  }
+  const data = snapshot.data();
+  return typeof data?.settings?.activeCalendarId === "string"
+    ? data.settings.activeCalendarId
+    : null;
 }
 
 /**
