@@ -1,11 +1,11 @@
 {
-  "Indexes": [
+  "indexes": [
     {
       "collectionGroup": "events",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "isRecurring", "direction": "ASCENDING" },
-        { "fieldPath": "date", "direction": "ASCENDING" }
+        { "fieldPath": "isRecurring", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "ASCENDING" }
       ]
     }
   ]

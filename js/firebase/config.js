@@ -13,12 +13,12 @@
  */
 
 export const firebaseConfig = {
-  apiKey: "REPLACE_WITH_API_KEY",
-  authDomain: "REPLACE_WITH_AUTH_DOMAIN",
-  projectId: "chrono-v2-placeholder",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "REPLACE_WITH_APP_ID",
+  apiKey: "AIzaSyDYsv0u26elqcwfAwE3AX6aiHbsIMzcoVE",
+  authDomain: "shared-calendar-webapp.firebaseapp.com",
+  projectId: "shared-calendar-webapp",
+  storageBucket: "shared-calendar-webapp.firebasestorage.app",
+  messagingSenderId: "711500195472",
+  appId: "1:711500195472:web:c37f5650db311cdb231a15",
 };
 
 /**
