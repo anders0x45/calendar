@@ -7,7 +7,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'chrono-shell-v6';
+const CACHE_NAME = 'chrono-shell-v7';
 
 const SHELL_ASSETS = [
   './',
@@ -42,6 +42,11 @@ const SHELL_ASSETS = [
   './js/data/events.js',
   './js/data/images.js',
   './js/data/settings.js',
+  './js/data/backend.js',
+  './js/data/cloudEvents.js',
+  './js/data/cloudImages.js',
+  './js/lib/settingsSplit.js',
+  './js/firebase/firestore-api.js',
   './js/data/accounts.js',
   './js/firebase/config.js',
   './js/firebase/sdk.js',

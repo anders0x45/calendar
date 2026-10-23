@@ -352,7 +352,7 @@ function archiveSection() {
 async function runExport(exportBtn) {
   exportBtn.disabled = true;
   const { events } = getState();
-  const images = await listImages();
+  const images = await listImages(events.map((event) => event.id));
   const envelope = await buildExport({ events, images });
   const blob = new Blob([JSON.stringify(envelope)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
