@@ -126,6 +126,23 @@ export async function listEvents() {
 }
 
 /**
+ * Apply one snapshot into app state (the pull-model refresh uses
+ * listEvents; this is the live push path). Local records replace state
+ * wholesale with the same validation discipline.
+ * @param {Object} snapshot
+ * @param {Array<{id: string}>} snapshot.docs
+ */
+export async function syncFirestoreSnapshot(snapshot) {
+  const events = [];
+  for (const document of snapshot.docs) {
+    const event = fromFirestoreDoc(document);
+    if (event) events.push(event);
+  }
+  const { setState } = await import("../state.js");
+  setState({ events });
+}
+
+/**
  * @param {string} id
  * @returns {Promise<Event | null>}
  */

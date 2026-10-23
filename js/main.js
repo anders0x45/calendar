@@ -18,6 +18,7 @@ import { mountSignIn } from "./ui/signin.js";
 import { mountOnboarding } from "./ui/onboarding.js";
 import { todayKey } from "./lib/dates.js";
 import { registerServiceWorker } from "./ui/serviceWorker.js";
+import { startLiveEvents } from "./ui/refresh.js";
 
 /**
  * Entry point: resolve the account session first, then either run the
@@ -181,6 +182,9 @@ async function bootCalendar() {
   onAfterSwitch(rememberLastView);
 
   startImageJobs();
+  // Cloud mode additionally streams in live event changes (the pull
+  // path stays as the local/offline fallback).
+  void startLiveEvents();
   initRouter();
   navigate(settings.lastView);
 }

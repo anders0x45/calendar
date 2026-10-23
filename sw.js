@@ -7,7 +7,7 @@
 
 'use strict';
 
-const CACHE_NAME = 'chrono-shell-v7';
+const CACHE_NAME = 'chrono-shell-v8';
 
 const SHELL_ASSETS = [
   './',
